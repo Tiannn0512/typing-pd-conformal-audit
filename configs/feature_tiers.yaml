@@ -1,0 +1,41 @@
+# feature_tiers.yaml — 三档特征体系冻结配置（TODO-1.4，2026-09-25）
+# 依据：研究计划书 v1.3.2 §4.2 + 分析冻结协议 v1 §2（Feature 冻结）
+# 效力：本文件为特征档位的唯一权威口径；跨库降档规则由 run_transfer 按 min(源,目标) 执行
+
+tiers:
+  L1:
+    description: hold/flight/latency 三信号无条件统计
+    features: [hold, flight, latency]
+    stats: [mean, median, sd, p10, p90]
+  L2:
+    description: L1 + 手别条件特征（协议 §2 冻结口径为左右手分层；空格层处理规则须随 W4 预注册写明——Tappy direction 含 S 层物理上绕不开）
+    features: [hold, flight, latency, hand_conditional]
+    stats: [mean, median, sd, p10, p90]
+  L3:
+    description: L2 + 字符二连键特征（char_from→char_to 聚合）
+    features: [hold, flight, latency, hand_conditional, char_digraph]
+    stats: [mean, median, sd, p10, p90]
+
+# 每库可用档位上限
+# typd=1 的机器验证依据：src/data/validate_schema.py --all 断言 typd_events.parquet
+# 无 hand*/char*/key 列（2026-09-25 实测通过，见 data/interim/parse_reports/schema_validation.json）
+# ⚠ MIT/OE 的手别口径：键位→左右手映射尚未定义（冻结文档无记载、代码未实现）——
+#   属 researcher degrees of freedom，须在 W4 预注册前落成版本化映射表并纳入预注册附件；
+#   在此之前 mit:3/oe:3 的 L2 层不得产出任何分析数字
+dataset_max_tier:
+  mit: 3     # 冻结协议 §2 转录；L3 无障碍（完整字符身份），L2 手别口径待 W4 冻结
+  tappy: 2   # 系统级钩子：原生左右手列，无字符身份（v1.3.2 三信号最小集）——L2 无口径缺口
+  typd: 1    # 手机触屏：实测 schema 仅 press/release/pressure，无手别无字符 → L1 上限
+  oe: 3      # 冻结协议 §2 转录；L3 无障碍，L2 手别口径同 MIT 待 W4 冻结
+
+# 跨库降档规则（冻结协议 §2：按目标库可用档位自动降档；档位作为覆盖衰减显式协变量记录）
+cross_dataset_rule: "tier(pair) = min(max_tier(source), max_tier(target))"
+
+# 压力通道：仅 TyPD 存在，其余库无 → 按协议弃用（可行性报告"协议不齐坑 1"），不进任何档位
+pressure_channel: discarded
+
+tier_confirmation:
+  typd_l1_ceiling:
+    confirmed_by: "validate_schema.py FORBIDDEN_TYPD_PATTERNS 断言"
+    confirmed_at: "2026-09-25"
+    evidence: "data/interim/parse_reports/schema_validation.json"
