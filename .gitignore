@@ -1,0 +1,12 @@
+# 受保护数据绝不入库（本课题数据虽公开，下载物仍不入库，只留清单与SHA256）
+data/
+*.csv
+*.parquet
+*.zip
+*.h5ad
+results/**/*.parquet
+
+# 临时产物
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
