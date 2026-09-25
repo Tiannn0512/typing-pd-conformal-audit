@@ -105,6 +105,9 @@ def parse_session_file(path: Path) -> dict:
     df["flight_ms"] = df["press_ms"] - df["press_ms"].shift(1)
     df["char_from"] = df["char"].shift(1)
     df["char_to"] = df["char"]
+    # 官方过滤（sanityCheck + autoFilt）已在上方完成，落表行全部为 keep
+    # （latency/flight 可为负：Phase 2 预登记清洗规则 hold/latency≤0 或 >10s 处置）
+    df["keep_flag"] = True
     return {
         "df": df,
         "n_raw": n_raw,
