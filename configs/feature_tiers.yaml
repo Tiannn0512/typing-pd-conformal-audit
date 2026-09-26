@@ -39,3 +39,24 @@ tier_confirmation:
     confirmed_by: "validate_schema.py FORBIDDEN_TYPD_PATTERNS 断言"
     confirmed_at: "2026-09-25"
     evidence: "data/interim/parse_reports/schema_validation.json"
+
+# ---------- L2/L3 具体特征定义（FEATURE-DEF-1，2026-09-26 结果产出前登记） ----------
+# 依据：手别映射表 v1.0.0 冻结（key_hand_mapping.yaml）；登记先于任何 L2/L3 数字产出
+feature_definitions:
+  L2_hand_conditional:
+    applies: [mit, tappy, oe]
+    definition: "hand ∈ {L, R} 分层（S/空格/特殊键/unmatched 剔除并计数）× {hold, latency, flight} mean → 6 列"
+    columns: "L2_{hold|latency|flight}_{L|R}_mean"
+  L3_digraph_transition:
+    applies: [mit, oe]
+    definition: "相邻字符对（char_from→char_to）双方均可映射到手时，按转移类型分层：
+                 same-hand（L→L / R→R）vs cross-hand（L→R / R→L）——
+                 {latency, flight} × {same, cross} mean + cross 占比 → 5 列；
+                 一方不可映射的二连对剔除并计数。学理依据：交替手二连序的时延是已知的
+                 PD 运动控制标记（低维、无源依赖、映射表推导）"
+    columns: "L3_{latency|flight}_{same|cross}_mean + L3_frac_cross"
+  unmatched_counting: "每方向构建时报告 excluded_unmatched_events / excluded_unassigned_events 计数（进 QC 与论文）"
+changelog:
+  - id: FEATURE-DEF-1
+    date: "2026-09-26"
+    note: "L2/L3 具体列定义在 Tier 结果产出前冻结登记（手别映射表 v1.0.0 冻结后解除产出禁令）"
