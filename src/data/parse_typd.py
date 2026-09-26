@@ -91,6 +91,13 @@ def main() -> None:
             )
 
     out = pd.concat(frames, ignore_index=True)
+    # digraph 三信号补全（2026-09-26，Phase 2 管线暴露的 Phase 1 缺口）：
+    # 冻结协议 §2 规定 L1 = hold/flight/latency 四库全部；trial 内按 press 排序派生，
+    # digraph 不跨 trial（session = TEX 文件）。组首行 NaN 属预期（与 MIT/OE 口径一致）。
+    out = out.sort_values(["subject", "session", "press_ms"], kind="mergesort").reset_index(drop=True)
+    g = out.groupby(["subject", "session"], sort=False)
+    out["latency_ms"] = (out["press_ms"] - g["release_ms"].shift(1)).astype("float32")
+    out["flight_ms"] = (out["press_ms"] - g["press_ms"].shift(1)).astype("float32")
     for c in ("dataset", "subject", "session"):
         out[c] = out[c].astype("category")
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

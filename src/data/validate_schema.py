@@ -38,7 +38,7 @@ EXPECTED_COLUMNS: dict[str, list[str]] = {
               "hold_ms", "latency_ms", "flight_ms", "keep_flag",
               "subject_mismatch", "field_valid"],
     "typd": ["dataset", "subject", "session", "press_ms", "release_ms", "hold_ms",
-             "pressure", "keep_flag"],
+             "latency_ms", "flight_ms", "pressure", "keep_flag"],
     "oe": ["dataset", "subject", "session", "key", "char_from", "char_to",
            "keydown", "keyup", "hold_ms", "latency_ms", "flight_ms",
            "keep_flag", "solitary"],

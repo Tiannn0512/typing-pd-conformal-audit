@@ -27,7 +27,8 @@ def _mini_row(dataset: str) -> dict:
                      "latency_ms": 30.0, "flight_ms": 80.0,
                      "subject_mismatch": False, "field_valid": True})
     elif dataset == "typd":
-        base.update({"press_ms": 100.0, "release_ms": 150.0, "hold_ms": 50.0, "pressure": 0.5})
+        base.update({"press_ms": 100.0, "release_ms": 150.0, "hold_ms": 50.0,
+                     "latency_ms": np.nan, "flight_ms": np.nan, "pressure": 0.5})
     elif dataset == "oe":
         base.update({"key": "a", "char_from": None, "char_to": "a", "keydown": 100.0,
                      "keyup": 150.0, "hold_ms": 50.0, "latency_ms": np.nan,
