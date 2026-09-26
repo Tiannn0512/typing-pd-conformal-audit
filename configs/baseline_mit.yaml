@@ -1,0 +1,45 @@
+# baseline_mit.yaml — TODO-3.2 MIT 库内基线：冻结配置 + 开工前决策记录（2026-09-26）
+# 依据：TODO_0925.md TODO-3.2 + 分析冻结协议 §3 + 开工前检查（复审 C，2026-09-26）
+# 纪律：本文件在运行任何基线之前落盘；三条决策（DEC-B1/B2/B3）为"看结果前冻结"的口径，
+#       运行后不得回改；越界动作 = TODO 既定"停，先讨论"，非自动判死。
+
+decisions:
+  - id: DEC-B1
+    item: 基线特征档位
+    decision: "L1 15 列（hold/latency/flight × mean/median/sd/p10/p90）"
+    rationale: "subjects.csv 的 MIT 行只有 L1 列；feature_tiers.yaml W4 警示封锁 MIT L2/L3
+                （键位→手别映射未预注册）。L1-only 是当前唯一合规档位。"
+    deferred: "Phase 4 库内参照与迁移方向的档位对齐规则留待 W4 预注册统一登记"
+
+  - id: DEC-B2
+    item: 切分取整语义 + gate 统计量
+    decision: |
+      split = sklearn 两步 stratified train_test_split(0.6/0.4→0.5/0.5)，
+      实际规模 32/25/25（sklearn 对 82×0.6 向上取整，接受该语义并在此写死）；
+      gate 绑定 LightGBM（协议 §3 primary）的 50-seed 平均 AUC ∈ [0.75, 0.91]；
+      median/全分布/经验 SE 同步入表；LR 如实报告但不绑 gate；
+      越界 → 强制讨论（TODO 既定动作）。
+    rationale: "TODO 原文'50 seeds 汇总+AUC∈[0.75,0.91]'未指明统计量——最忠实读法为
+                primary 模型的 seed 均值；开工前检查实测单 seed 噪声 SE≈0.088、50-seed
+                均值 SE≈0.048，gate 有 7-13% 假停概率（可接受：动作是讨论而非判死）"
+
+  - id: DEC-B3
+    item: 调参纪律
+    decision: "零调参——LR 与 LightGBM 均用官方默认参数（LightGBM random_state=model_seed=42）"
+    rationale: "TODO-3.2 是 go/no-go 工程冒烟性质；零调参 = 零泄漏面（val 折仅记录不用于
+                选择），满足协议 §3 '调参仅源域内部'的最强形式。Phase 4 若需调参另走登记"
+
+run_spec:
+  dataset: mit
+  features: L1_15
+  split: "两步 stratified：train 40%（32）→ val 30%（25）+ test 30%（25）"
+  seeds: configs/seeds.yaml split_seeds（1-50）
+  models:
+    lr: "LogisticRegression 默认参数；StandardScaler 仅在 train 折内 fit"
+    lightgbm: "LGBMClassifier 默认参数 + random_state=42（model_seed，不随 split seed 漂移）"
+  leakage_guards:
+    - "scaler 逐 seed 在 train 折内 fit（禁全池 fit）"
+    - "val/test 一次性使用（无阈值/参数/早停选择）"
+    - "仅读 dataset=='mit' 行，其他库零参与（含归一化统计）"
+    - "同 seed 重跑逐字节可复现"
+  output: results/baseline_mit.csv（per-seed 行 + gate 判定）
