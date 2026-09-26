@@ -12,8 +12,10 @@
   4. Tappy session 切分口径变体：月会话→季度会话（YYMM→YYYYQn），会话有效性
      规则不变（≥100 digraphs/会话；Tappy 无速率规则——S5 rate 对 tappy 为 NaN），
      冻结人池（173）固定不变、仅重聚合特征（灵敏度问题=特征构建稳健性，非队列
-     重定义）——全执行。**验证锚点**：本脚本自实现的月单位重聚合必须逐位复现
-     subjects.csv 的 Tappy L1（15 列）+ L2tappy（6 列），否则中止不产出。
+     重定义）——全执行。**验证锚点**：本脚本自实现的月单位重聚合必须复现
+     subjects.csv 的 Tappy L1（15 列）+ L2tappy（6 列）至 ≤1e-9 绝对差（逐位比较
+     含 parquet 往返求和序噪声 ≤1-2 ulp，首跑实测；1e-9 足以拦截真实配方错误），
+     否则中止不产出。
   5. ~~OE H&Y0 剔除~~：不适用（预注册：公开数据无 H&Y 字段）——不出行。
   6. 特征档位协变量（plan §2/§5"显式协变量记录"）：描述性表——12 方向 tier ×
      覆盖/AUC（读 frozen transfer_matrix.csv），无新拟合。
@@ -172,11 +174,20 @@ def main() -> None:
     feat_m = feat_m.set_index("subject")
     idx_order = frozen_tappy["subject"].astype(str).values
     mine = feat_m.loc[idx_order]
+    # 锚点口径：≤1e-9 绝对差（ms 量纲）。逐位比较会因 parquet 往返的求和序噪声出现
+    # ≤1-2 ulp 漂移（首跑实测 35/173 人、量级 ~1e-14）——1e-9 仍足以拦截真实配方
+    # 错误（子集/过滤错误为 0.1+ 量级）；变体与锚点同一聚合器，内部自洽。
+    max_diff = 0.0
     for col in L1_COLS + L2TAPPY_COLS:
         a = mine[col].to_numpy(dtype=float)
         b = frozen_tappy[col].to_numpy(dtype=float)
-        assert np.array_equal(a, b, equal_nan=True), f"聚合器锚点失败: {col}"
-    print("[anchor] 月单位重聚合逐位复现 subjects.csv Tappy L1+L2tappy（21 列）")
+        assert np.allclose(a, b, rtol=0, atol=1e-9, equal_nan=True), \
+            f"聚合器锚点失败: {col} max|Δ|={np.nanmax(np.abs(a - b))}"
+        both = ~(np.isnan(a) | np.isnan(b))
+        if both.any():
+            max_diff = max(max_diff, float(np.abs(a[both] - b[both]).max()))
+    print(f"[anchor] 月单位重聚合复现 subjects.csv Tappy L1+L2tappy（21 列，"
+          f"max|Δ|={max_diff:.2e} ≤ 1e-9，1-ulp 求和序噪声）")
 
     # 震颤 3 人（S6 ≥300 逐人核查——只数存活会话内事件）
     tu = pd.read_csv("data/interim/tappy_users.csv")
