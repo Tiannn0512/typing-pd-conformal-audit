@@ -17,8 +17,11 @@ Wang, Smola 2018）：源域按真类平均预测概率得混淆矩阵 C，目�
   2. π* 网格（升序）= {0.30, 42/82, 216/366, 0.74}：0.5122=MIT 源患病率（无移位
      锚点）、0.5902=合并自报目标实测、0.74=预注册 Tappy 实测患病率；n_t=173
      （primary 目标规模）。
-  3. BBSE 估计量变体（预声明）：2×2 精确解 → w 截断 ≥0 → 归一化 sum 1 →
-     π̂ = w⊙π̂_s（Lipton 实践配方；非纯 LS）。
+  3. BBSE 估计量变体（v2 勘误后，见台账记录）：C = 按类**平均**预测概率（行=真类，
+     Lipton Algorithm 1 规格），μ = C^T w 的解 w 即目标患病率（比值 γ 规格须用
+     未归一化混淆矩阵，两规格不可混用）；w 截断 ≥0 → 归一化 sum 1 为预声明保护。
+     v1 曾误按比值规格再乘 π̂_s（系统性 ×π̂_s 压缩），被预注册无移位锚点
+     （π*=42/82 处偏差 −0.245、结构性不可能）当场拦截，v2 修正后重跑。
   4. 随机性双源（均登记）：Monte Carlo R=500 reps，numpy default_rng(1)
      （stress_seed_base，消耗顺序 = π* 升序）；bootstrap CI = percentile 95%、
      B=1000、default_rng(42)（seeds.yaml bootstrap_seed），重采样目标样本行，
@@ -65,17 +68,19 @@ CAVEAT = ("Descriptive only: label-shift-only assumption is violated on real pai
 
 def bbse_pd_prevalence(probs_src: np.ndarray, y_src: np.ndarray,
                        probs_tgt: np.ndarray) -> float:
-    """Lipton et al. 2018（预声明变体）：C 按源真类平均 → 精确解 → 截断归一 → π̂。"""
+    """Lipton et al. 2018（预声明变体，v2 勘误后）：C = 按类**平均**预测概率
+    （行=真类）时，μ = C^T w 的解 w 即目标患病率向量（比值规格须用未归一化
+    混淆矩阵——两种规格不可混用；v1 曾误再乘 π̂_s，被 π*=无移位锚点拦截）。
+    截断 ≥0 + 归一化为预声明保护。"""
     c0 = probs_src[y_src == 0].mean(axis=0)
     c1 = probs_src[y_src == 1].mean(axis=0)
     mu = probs_tgt.mean(axis=0)
-    pi_s = np.array([(y_src == 0).mean(), (y_src == 1).mean()])
     w = np.linalg.solve(np.array([c0, c1]).T, mu)
     w = np.clip(w, 0.0, None)
     if w.sum() <= 0:
         return float("nan")
     w = w / w.sum()
-    return float((w * pi_s)[1])
+    return float(w[1])
 
 
 def bootstrap_ci(probs_tgt: np.ndarray, probs_src: np.ndarray, y_src: np.ndarray,
