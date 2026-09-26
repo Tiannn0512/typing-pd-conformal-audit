@@ -56,17 +56,32 @@ def main() -> None:
             X_tmp, y_tmp, test_size=0.50, random_state=seed, stratify=y_tmp)
         # 标准化仅在 train 折内 fit（泄漏守卫）
         scaler = StandardScaler().fit(X_tr)
-        for model_name in ("lr", "lightgbm"):
-            if model_name == "lr":
-                clf = LogisticRegression(random_state=MODEL_SEED, max_iter=1000)
-            else:
-                clf = LGBMClassifier(random_state=MODEL_SEED, verbose=-1)
-            clf.fit(scaler.transform(X_tr), y_tr)
-            auc_va = roc_auc_score(y_va, clf.predict_proba(scaler.transform(X_va))[:, 1])
-            auc_te = roc_auc_score(y_te, clf.predict_proba(scaler.transform(X_te))[:, 1])
-            rows.append({"seed": seed, "model": model_name,
-                         "auc_val": auc_va, "auc_test": auc_te,
-                         "n_train": len(y_tr), "n_val": len(y_va), "n_test": len(y_te)})
+        X_tr_s, X_va_s, X_te_s = scaler.transform(X_tr), scaler.transform(X_va), scaler.transform(X_te)
+
+        # LR：官方默认（DEC-B3 零调参不变）
+        clf = LogisticRegression(random_state=MODEL_SEED, max_iter=1000).fit(X_tr_s, y_tr)
+        auc_va = roc_auc_score(y_va, clf.predict_proba(X_va_s)[:, 1])
+        auc_te = roc_auc_score(y_te, clf.predict_proba(X_te_s)[:, 1])
+        rows.append({"seed": seed, "model": "lr", "auc_val": auc_va, "auc_test": auc_te,
+                     "lgbm_min_child_samples": None, "lgbm_max_depth": None,
+                     "n_train": len(y_tr), "n_val": len(y_va), "n_test": len(y_te)})
+
+        # LightGBM：DEC-B3b 预声明微网格，val AUC 选择（源域内部，协议 §3），test 一次性评估
+        grid = [(5, 2), (5, 3), (10, 2), (10, 3)]  # (min_child_samples, max_depth) 声明序=平局序
+        best = None
+        for mcs, depth in grid:
+            clf = LGBMClassifier(random_state=MODEL_SEED, verbose=-1,
+                                 min_child_samples=mcs, max_depth=depth).fit(X_tr_s, y_tr)
+            v = roc_auc_score(y_va, clf.predict_proba(X_va_s)[:, 1])
+            if best is None or v > best[0]:
+                best = (v, mcs, depth)
+        val_sel, mcs_sel, depth_sel = best
+        clf = LGBMClassifier(random_state=MODEL_SEED, verbose=-1,
+                             min_child_samples=mcs_sel, max_depth=depth_sel).fit(X_tr_s, y_tr)
+        auc_te = roc_auc_score(y_te, clf.predict_proba(X_te_s)[:, 1])
+        rows.append({"seed": seed, "model": "lightgbm", "auc_val": val_sel, "auc_test": auc_te,
+                     "lgbm_min_child_samples": mcs_sel, "lgbm_max_depth": depth_sel,
+                     "n_train": len(y_tr), "n_val": len(y_va), "n_test": len(y_te)})
 
     res = pd.DataFrame(rows)
     Path(args.out).parent.mkdir(exist_ok=True)
