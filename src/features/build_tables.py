@@ -81,7 +81,14 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "tremor_only": False,
         "label_source": "self_report",
     })
-    return {"mit": pd.DataFrame(mit), "typd": typd, "tappy": tappy, "oe": oe}
+    out = {"mit": pd.DataFrame(mit), "typd": typd, "tappy": tappy, "oe": oe}
+    # 标签 NaN 防护（合并终审 B/发现3：NaN==True→False 会静默扩 HC 组；当前数据零 NaN，
+    # 任何数据刷新若引入 NaN 则在此响亮失败）
+    for name, df_lab in out.items():
+        assert df_lab["subject"].notna().all(), f"{name} 标签表 subject 含 NaN"
+        assert df_lab["label_pd"].notna().all(), f"{name} 标签表 label_pd 含 NaN"
+        assert df_lab["tremor_only"].notna().all(), f"{name} 标签表 tremor_only 含 NaN"
+    return out
 
 
 def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -152,6 +159,11 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
     n_drop_rate = int((sess_stat["excluded_by"] == "rate_lt20").sum())
     n_drop_min100 = int((sess_stat["excluded_by"] == "valid_lt100").sum())
 
+    # S5 行数值快照——必须在 person 过滤之前（合并终审 B/发现1：2026-09-26 首修位置错误，
+    # 快照落在了 person 过滤后致 S5==S6；本次移至 session 级过滤之后、person 过滤之前）
+    s5_sessions = int(len(kept_sessions))
+    s5_digraphs = int(kept_sessions["n_valid"].sum())
+
     # ⑥ person 级规则（口径：有存活 session 且合计 <300 才算 person 规则排除；
     #              唯一 session 已被 session 级规则剔光的人归入 n_drop_all_sessions）
     persons_before = set(sess_stat["subject"].unique())
@@ -166,10 +178,9 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
     kept_keys = kept_sessions[["subject", "session"]]
     final = pool.merge(kept_keys, on=["subject", "session"], how="inner")
     sess_stat["n_digraphs_final"] = sess_stat["session"].map(final.groupby("session", observed=True).size()).fillna(0).astype("int64")
-
-    # S5 行数值快照（person 过滤前）——保证 S4→S5 差值可由 note 闭合（必修2）
-    s5_sessions = int(len(kept_sessions))
-    s5_digraphs = int(kept_sessions["n_valid"].sum())
+    # person 出队者标记（合并终审 B/发现2：出队者的 session 行须可辨识，
+    # 否则 excluded_by=='' 口径会多计 2,560−2,508 的行）
+    sess_stat["person_excluded"] = ~sess_stat["subject"].isin(persons_after)
 
     # 队列表行（subject 级在此处只记 raw；标签相关行在 main() 的 ⑦ 统一追加）
     subjects_kept = final["subject"].nunique()
@@ -194,12 +205,12 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
                  "n_sessions": s5_sessions, "n_digraphs": s5_digraphs,
                  "note": f"rate<20 剔除 {n_drop_rate}；valid<100 剔除 {n_drop_min100}"})
     flow.append({"dataset": dataset, "step": "S6_person_rules", "n_subjects": subjects_kept,
-                 "n_sessions": int(len(kept_sessions)), "n_digraphs": s5_digraphs,
+                 "n_sessions": int(len(kept_sessions)), "n_digraphs": int(kept_sessions["n_valid"].sum()),
                  "note": f"person<300 排除 {n_drop_person}；唯一 session 被 session 级规则剔光者 {n_drop_all_sessions}"})
 
     sess_stat.insert(0, "dataset", dataset)
     sess_stat["subject"] = sess_stat["subject"].astype(str)  # 跨库 concat：MIT 为 int，统一 str
-    return final, sess_stat
+    return final, sess_stat, set(df["subject"].astype(str).unique())
 
 
 def person_features(final: pd.DataFrame, dataset: str) -> pd.DataFrame:
@@ -233,10 +244,12 @@ def main() -> None:
     Path("results").mkdir(exist_ok=True)
     flow: list[dict] = []
     finals, sess_all = {}, []
+    raw_subjects = {}
     for dataset in ("mit", "tappy", "typd", "oe"):
-        final, sess_stat = clean_dataset(dataset, flow)
+        final, sess_stat, subj_set = clean_dataset(dataset, flow)
         finals[dataset] = final
         sess_all.append(sess_stat)
+        raw_subjects[dataset] = subj_set
 
     # ⑦ 队列定义（标签在此才介入）
     labels = load_labels()
@@ -257,10 +270,13 @@ def main() -> None:
         feats_main = feats[~feats["tremor_only"]].copy()
         subj_rows.append((dataset, feats, feats_main, n_no_label, n_tremor))
 
+        # require_events 显式留痕（合并终审 B/发现7）：有标签但无任何解析层事件者
+        labeled_no_events = int(len(lab) - lab["subject"].isin(raw_subjects[dataset]).sum())
         last = [f for f in flow if f["dataset"] == dataset][-1]
         flow.append({"dataset": dataset, "step": "S7_label_rules", "n_subjects": int(len(feats_main)),
                      "n_sessions": int(last["n_sessions"]), "n_digraphs": int(last["n_digraphs"]),
-                     "note": f"无标签排除 {n_no_label}；单纯震颤主分析排除 {n_tremor}"})
+                     "note": f"无标签排除 {n_no_label}；单纯震颤主分析排除 {n_tremor}；"
+                             f"有标签无事件排除 {labeled_no_events}"})
         flow.append({"dataset": dataset, "step": "S8_eligible_main", "n_subjects": int(len(feats_main)),
                      "n_sessions": int(last["n_sessions"]), "n_digraphs": int(last["n_digraphs"]),
                      "note": f"PD={int(feats_main['label_pd'].sum())} HC={int((~feats_main['label_pd']).sum())}"})
@@ -268,6 +284,15 @@ def main() -> None:
     subjects_all = pd.concat([fm for _, _, fm, _, _ in subj_rows], ignore_index=True)
     subjects_full = pd.concat([fa for _, fa, _, _, _ in subj_rows], ignore_index=True)
     sessions_out = pd.concat(sess_all, ignore_index=True)
+
+    # label_excluded 标记：session 属于清洗幸存但被标签规则出队者（主要为 tappy 29+3）
+    eligible_keys = set(zip(subjects_all["dataset"], subjects_all["subject"].astype(str)))
+    sessions_out["label_excluded"] = [
+        (d, str(sub)) not in eligible_keys for d, sub in zip(sessions_out["dataset"], sessions_out["subject"])
+    ]
+    # session 唯一性断言（TODO-1.4 移交 W3 验收项，2026-09-26 登记闭环）
+    dup = sessions_out.duplicated(subset=["dataset", "subject", "session"])
+    assert not dup.any(), f"session 唯一性断言失败：{int(dup.sum())} 条重复 (dataset,subject,session)"
 
     subjects_out = subjects_all.copy()
     cols_front = ["subject_id", "dataset", "subject", "label_pd", "label_source"]

@@ -1,6 +1,6 @@
 # QC 报告 — Phase 2 清洗后分析就绪数据（TODO-2.2）
 
-**生成**：2026-09-26 10:31 ｜ **配置**：configs/cleaning.yaml ｜ **权威队列表**：results/cohort_flow.csv（eligible=475：PD 270/HC 205）
+**生成**：2026-09-26 11:15 ｜ **配置**：configs/cleaning.yaml ｜ **权威队列表**：results/cohort_flow.csv（eligible=475：PD 270/HC 205）
 
 ## 1. 特征缺失率（Tier-A = L1 三信号 15 列）
 
@@ -28,7 +28,7 @@ L1 零方差列：无
 | typd | 有（临床）| {(False, 'Female'): 7, (False, 'Male'): 8, (True, 'Female'): 1, (True, 'Male'): 11} |
 | oe | **本数据无性别字段** | 不可得（在线招募未含性别入公开 CSV）|
 
-## 4. session 数分布（每人，存活 session；475 名入队者）
+## 4. session 数分布（每人，存活 session）
 
 | 数据集 | session 定义 | min | 中位 | max |
 |---|---|---|---|---|
@@ -46,7 +46,7 @@ L1 零方差列：无
 - typd: min=493 / median=759 / max=960
 - oe: min=319 / median=1305 / max=2954
 
-**观察**：Tappy 有 24 名用户有效 digraph >10 万（最大 1,072,437，约占 Tappy 总量 12%）——person 级聚合下每人一行不受影响，该 24 人合计约占 Tappy digraph 总量 75%；person 级聚合下每人一行不受影响，但 Phase 4 涉及 Tappy 总量口径的统计时须注意该长尾。
+**观察**：Tappy 有 24 名用户有效 digraph >10 万（最大 1,072,437，约占 Tappy 总量 12%）——person 级聚合下每人一行不受影响，但 Phase 4 涉及 Tappy digraph 总量口径的统计时须注意该长尾。
 
 ## 6. Gate 检查
 

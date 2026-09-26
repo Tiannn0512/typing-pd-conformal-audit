@@ -67,7 +67,7 @@ cohort_rules:
 # ---------- 7. 特征档位（本管线产出范围） ----------
 features_built:
   L1_all: "hold/latency/flight × mean/median/sd/p10/p90（四库，15 列；NaN 不计入统计）"
-  L2_tappy_native: "Tappy 原生手别列（hand_from L/R/S 分层 × hold/latency/flight mean，6 列）"
+  L2_tappy_native: "Tappy 原生手别列（hand_from L/R 分层 × hold/latency/flight mean，6 列；S 空格层处理规则待 W4 预注册，与 feature_tiers.yaml 警示一致）"
   deferred: "MIT/OE 的 L2（键位→手别映射）与 L3（字符二连键）按 configs/feature_tiers.yaml
              冻结警示：须待 W4 预注册冻结映射口径后方可产出，本管线不生成（scope discipline）"
 
@@ -82,3 +82,8 @@ change_log:
     approval: "用户拍板（AskUserQuestion 选项 A，2026-09-26）"
     effect: "digraph 派生口径不变（仍在 trial 内，无跨 trial 二连键）；仅 session 级规则
              （rate≥20 字/分、有效 digraph≥100）的评估单位升为访视"
+deferred_decisions:
+  - id: DEF-1
+    item: "OE 精确重复事件行（participating=2,063 / redundant=1,203，占 keep 行 0.27%）是否去重"
+    status: "显式挂起（2026-09-26 合并终审 C/缺口1 登记为正式决策项）；当前行为 = 保留重复入池"
+    deadline: "W4 预注册冻结前必须定案（TODO-3.4）；定案后在此登记 + limitations 披露"

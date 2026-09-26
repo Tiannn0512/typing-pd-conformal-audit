@@ -30,6 +30,8 @@ def main() -> None:
     sessions = pd.read_parquet(PROCESSED / "sessions.parquet")
     eligible_keys = subjects[["dataset", "subject"]].assign(subject=lambda d: d["subject"].astype(str))
     sessions = sessions.merge(eligible_keys, on=["dataset", "subject"], how="inner")  # 仅 475 名入队者
+    # 严格存活口径（合并终审 B/发现2 统一）：session 级幸存 且 非 person/label 出队
+    alive = sessions[(sessions["excluded_by"] == "") & (~sessions["person_excluded"]) & (~sessions["label_excluded"])]
     flow = pd.read_csv("results/cohort_flow.csv")
 
     l1_cols = [c for c in subjects.columns if c.startswith("L1_")]
@@ -89,13 +91,10 @@ def main() -> None:
     ap_line("|---|---|---|---|---|")
     for ds, definition in (("mit", "visit 文件"), ("tappy", "月文件（USER_YYMM）"),
                            ("typd", "visit（全部 TEX trial 合并评估，CHG-1）"), ("oe", "participant×response")):
-        g = sessions[(sessions.dataset == ds) & (sessions.excluded_by == "")].groupby("subject").size()
+        g = alive[alive.dataset == ds].groupby("subject").size()
         ap_line(f"| {ds} | {definition} | {g.min()} | {int(g.median())} | {g.max()} |")
     ap_line("")
-    ap_line("**Tappy 月文件切 session 口径记录**：session = 自然月文件（USER_YYMM），同一人跨月"
-            "多 session 属设计内（自然打字纵向流）； session 级规则仅 valid<100 适用的速率/flight"
-            " 豁免（自由文本）。" if False else
-            "**Tappy 月文件切 session 口径记录**：session = 自然月文件（USER_YYMM），同一人跨月多 "
+    ap_line("**Tappy 月文件切 session 口径记录**：session = 自然月文件（USER_YYMM），同一人跨月多 "
             "session 属设计内（自然打字纵向流）；tappy 为自由文本，flight/速率规则豁免，仅适用 "
             "digraph 通用规则 + valid<100。")
     ap_line("")
@@ -103,10 +102,10 @@ def main() -> None:
     ap_line("## 5. person 有效 digraph 分布")
     ap_line("")
     for ds in ("mit", "tappy", "typd", "oe"):
-        g = sessions[(sessions.dataset == ds) & (sessions.excluded_by == "")].groupby("subject")["n_valid"].sum()
+        g = alive[alive.dataset == ds].groupby("subject")["n_valid"].sum()
         ap_line(f"- {ds}: min={int(g.min())} / median={int(g.median())} / max={int(g.max())}")
     ap_line("")
-    big = sessions[sessions.dataset == "tappy"].groupby("subject")["n_valid"].sum()
+    big = alive[alive.dataset == "tappy"].groupby("subject")["n_valid"].sum()
     n_big = int((big > 100_000).sum())
     ap_line(f"**观察**：Tappy 有 {n_big} 名用户有效 digraph >10 万（最大 {int(big.max()):,}，"
             f"约占 Tappy 总量 {big.max() / big.sum():.0%}）——person 级聚合下每人一行不受影响，"
