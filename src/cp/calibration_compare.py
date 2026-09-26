@@ -202,7 +202,8 @@ def main() -> None:
                   f"（Δ{r['delta_coverage']:+.4f}）PD={r['cpc_pd']:.4f}"
                   f"（Δ{r['delta_cpc_pd']:+.4f}）HC={r['cpc_hc']:.4f}"
                   f"（Δ{r['delta_cpc_hc']:+.4f}）"
-                  f" 点≥0.80={r['point_ge_080']} CI下界≥0.80={r['cilo_ge_080']}{deg}")
+                  f" 点≥0.80={r['point_ge_080']} CI下界≥0.80={r['cilo_ge_080']}"
+                  f" 拒绝率={r['rejection_rate']:.2f}{deg}")
 
     rep = {"predeclarations": __doc__.split("实现级预声明")[1].split("产出")[0].strip(),
            "draw_seed": DRAW_SEED, "rows": rows}
