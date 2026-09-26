@@ -1,0 +1,17 @@
+OSF 预注册记录（TODO-3.4 / 2026-09-26 18:09 注册生效）
+
+状态：已注册 + EMBARGOED（2 年，2028-09-26 到期；可提前解除）
+- Registration Type: Open-Ended Registration
+- Date registered: Sep 26, 2026, 6:09 PM（预注册时间戳 = 优先权标记，不可篡改）
+- Associated project: https://osf.io/j9fvx
+- 注册页：项目 j9fvx → Registrations 标签下本次条目
+- License: CC0 1.0 Universal
+- 文件：5 个（analysis_plan_v1.0.1_PREREG.md + 映射表 v1.0.0 + 基线决策 + 功效表×2）
+
+DOI 状态：**暂无（embargoed 注册的预期行为）**
+- OSF 规则：DOI 在 embargo 结束或提前解除时生成
+- 引用口径（论文/W10 arXiv）：cite as "OSF registration, Sep 26 2026 (embargoed),
+  https://osf.io/j9fvx" + git tag v1.0-prereg（仓库内逐字节锚定）
+- DOI 生成时机（二选一，届时把 DOI 补记到本文件）：
+  ①投稿需要 DOI 时：注册页 → 解除 embargo（立即公开）→ DOI 数分钟内生成
+  ②默认：2028-09-26 embargo 到期自动生成
