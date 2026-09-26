@@ -38,7 +38,8 @@
      空集率另列（LAC 可产生空集，病理如实报告）。qhat=+inf（m<9 小校准诚实退化）
      行标记 degenerate——名义覆盖 1.0 但集合效用全毁，恢复判读不得只看点估计。
   7. 恢复判据（Golden gate）双向呈现不挑数：点估计 cov ≥ 0.80 的最小预算 与
-     CI 下界 ≥ 0.80（Compatible 级）的最小预算，并标注退化行。
+     CI 下界 ≥ 0.80 的最小预算（与 plan §6 Compatible 同式的 CI 下界判据，仅为
+     判据复用、不对任何行施加三分类判定），并标注退化行。
 
 产出：results/recovery_cost_table.csv（正式）+ data/interim/parse_reports/recovery_cost_report.json
 """
