@@ -27,13 +27,14 @@ Einbinder 理论要点（对表基准）：固定预训练模型 + 校准标签�
      对齐设定**（理论表仅对此档有效）；
      train_cal = 训练+校准标签同时翻转并重训——"源域腐蚀"的部署读法，理论假设
      （固定模型）不适用，如实标注 n/a，仅描述性报告。
-  4. 理论对表操作化（cal_only 档）：占优条件在目标测试分数上**精确计算**（无额外
-     抽样）——按臂/剂量的实现翻转率 r（m/n_donor，非名义值），腐蚀过程下测试分数
-     的精确混合 CDF：F_noisy(t) = (1/n)Σ_i[(1−r_{y_i})·1{s_i≤t} + r_{y_i}·
-     1{s_{1−y_i}≤t}]；dominance_holds = ∀t∈观测分数格点：F_noisy(t) ≤ F_clean(t)+1e-12。
-     占优成立 → 理论预测"覆盖 ≥ 0.90 有保证"；不成立 → "无保证（非分散性腐蚀）"；
-     train_cal 档 → "n/a（模型重训，理论假设固定模型不成立）"。观测覆盖与保证声明
-     的一致性逐格呈现（对表交付物）。
+  4. 理论对表操作化（v2 修订，见台账记录）：占优条件**双侧精确计算**（无额外抽样），
+     按臂/剂量实现翻转率 r（m/n_donor，非名义值）构造腐蚀过程的精确混合 CDF：
+     F_noisy(t) = (1/n)Σ_i[(1−r_{y_i})·1{s_own,i≤t} + r_{y_i}·1{s_opp,i≤t}]。
+     **主检查在校准侧**（cal_only 档的忠实机制凭证）：占优 ⇒ q̂_noisy ≥ q̂_clean ⇒
+     覆盖 ≥ 干净校准管线（迁移修正读法——1−α 名义保证本身要求 cal/test 可交换，
+     迁移设定下前提不成立，故对表对象为"噪声不减覆盖"机制而非名义阈值）；
+     测试侧占优（论文全腐蚀前提）作次要参考列。train_cal 档理论 n/a（模型重训）。
+     过程级条件 vs 单次实现抽取的区分如实标注。
   5. 效率列口径与冻结协议 §5 一致（拒绝率 = 全集 size==2；空集率另列）；PD/HC 类
      条件覆盖随行报告（与 4.3 安全诊断衔接，描述性）。
 
@@ -56,7 +57,8 @@ from sklearn.preprocessing import StandardScaler
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from cp.conformal import lac_scores, predict_sets_split, split_conformal_quantile  # noqa: E402
 from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from cp.remediate import cp_ci, metrics, sets_at_quantile  # noqa: E402
+from cp.remediate import metrics, sets_at_quantile  # noqa: E402
+from models.run_transfer import load_matrix  # noqa: E402
 
 STRESS_SEED = 1  # seeds.yaml stress_seed_base（重采样随机化登记口径）
 ARMS = ("PD2HC", "HC2PD", "symmetric")
@@ -83,31 +85,32 @@ def flip_counts(y_s: np.ndarray, arm: str, dose: int,
     return np.sort(idx), m_pd, m_hc
 
 
-def dominance_check(probs_te: np.ndarray, y_t: np.ndarray,
-                    r_pd: float, r_hc: float) -> tuple[bool, float]:
-    """Einbinder 占优条件在测试分数上的精确混合 CDF 核查（无额外抽样）。
+def dominance_mixture(scores_own: np.ndarray, scores_opp: np.ndarray, y: np.ndarray,
+                      r_pd: float, r_hc: float) -> tuple[bool, float]:
+    """Einbinder 占优条件的精确混合 CDF 核查（无额外抽样），可作用于任一侧分数。
 
-    r_cls = 该类标签被翻转的概率（实现率）。干净分数 s_i = 1−p_{y_i}；
-    腐蚀分数以概率 (1−r) 取 s_i、以概率 r 取 1−p_{1−y_i}。
-    占优成立 ⟺ ∀t: F_noisy(t) ≤ F_clean(t)（+容差）。
+    r_cls = 该类标签被翻转的过程概率（实现率）。干净分数 s_own；被翻转到对侧标签时
+    分数 s_opp。腐蚀过程下 F_noisy(t) = (1/n)Σ_i[(1−r_{y_i})·1{s_own,i≤t} +
+    r_{y_i}·1{s_opp,i≤t}]；占优成立 ⟺ ∀t: F_noisy(t) ≤ F_own(t)（+容差）。
     """
-    s_clean = 1.0 - probs_te[np.arange(len(y_t)), y_t]
-    s_flip = 1.0 - probs_te[np.arange(len(y_t)), 1 - y_t]
-    r = np.where(y_t == 1, r_pd, r_hc)
-    grid = np.unique(np.concatenate([s_clean, s_flip]))
-    f_clean = np.array([(s_clean <= t).mean() for t in grid])
-    f_noisy = np.array([((1 - r) * (s_clean <= t) + r * (s_flip <= t)).sum() / len(y_t)
+    r = np.where(y == 1, r_pd, r_hc)
+    grid = np.unique(np.concatenate([scores_own, scores_opp]))
+    f_own = np.array([(scores_own <= t).mean() for t in grid])
+    f_noisy = np.array([((1 - r) * (scores_own <= t) + r * (scores_opp <= t)).sum() / len(y)
                         for t in grid])
-    viol = f_noisy - f_clean
+    viol = f_noisy - f_own
     return bool((viol <= DOMINANCE_TOL).all()), float(viol.max())
 
 
 def theory_label(scope: str, dominance: bool) -> str:
     if scope == "train_cal":
         return "n/a (model retrained; theory assumes fixed model)"
-    return ("guarantee: coverage >= 0.90 (dispersive corruption, dominance holds)"
-            if dominance else
-            "no guarantee (non-dispersive corruption, dominance violated)")
+    if dominance:
+        return ("mechanism: quantile inflation predicted -> coverage >= clean-cal pipeline; "
+                "note: 1-alpha guarantee itself not directly applicable under transfer "
+                "(cal/test exchangeability broken)")
+    return ("no mechanism guarantee (process dominance violated; realized qhat may shift "
+            "either way)")
 
 
 def main() -> None:
@@ -138,22 +141,31 @@ def main() -> None:
 
     def run_cell(y_train: np.ndarray, y_cal: np.ndarray, scope: str,
                  r_pd: float, r_hc: float) -> dict:
-        """单 cell：给定（训练标签, 校准标签, scope, 实现翻转率）→ 全管线 + 理论核查。"""
+        """单 cell：给定（训练标签, 校准标签, scope, 实现翻转率）→ 全管线 + 双侧理论核查。"""
         scaler = StandardScaler().fit(X_s[tr_idx])
         clf = LogisticRegression(random_state=42, max_iter=1000)
         clf.fit(scaler.transform(X_s[tr_idx]), y_train)
-        scores_cal = lac_scores(clf.predict_proba(scaler.transform(X_s[cal_idx])), y_cal)
+        probs_cal = clf.predict_proba(scaler.transform(X_s[cal_idx]))
+        y_cal_clean = y_s[cal_idx]
+        same_cal = np.array_equal(y_cal, y_cal_clean)
+        scores_cal_clean = lac_scores(probs_cal, y_cal_clean)
+        q = split_conformal_quantile(lac_scores(probs_cal, y_cal), ALPHA)
+        q_clean = q if same_cal else split_conformal_quantile(scores_cal_clean, ALPHA)
         probs_te = clf.predict_proba(scaler.transform(X_t))
-        q = split_conformal_quantile(scores_cal, ALPHA)
         sets = sets_at_quantile(probs_te, q)
         m = metrics(y_t, sets)
-        dom, max_viol = dominance_check(probs_te, y_t, r_pd, r_hc)
-        q_clean = split_conformal_quantile(
-            lac_scores(clf.predict_proba(scaler.transform(X_s[cal_idx])),
-                       y_s[cal_idx]), ALPHA) if not np.array_equal(y_cal, y_s[cal_idx]) else q
+        # 校准侧主检查（cal_only 的忠实机制凭证）+ 测试侧次要参考（论文全腐蚀前提）
+        n_cal = len(y_cal_clean)
+        s_own = scores_cal_clean
+        s_opp = 1.0 - probs_cal[np.arange(n_cal), 1 - y_cal_clean]
+        dom_cal, viol_cal = dominance_mixture(s_own, s_opp, y_cal_clean, r_pd, r_hc)
+        s_te = 1.0 - probs_te[np.arange(len(y_t)), y_t]
+        s_te_opp = 1.0 - probs_te[np.arange(len(y_t)), 1 - y_t]
+        dom_te, viol_te = dominance_mixture(s_te, s_te_opp, y_t, r_pd, r_hc)
         return {**m, "qhat": q, "qhat_clean": q_clean, "qhat_shift": q - q_clean,
-                "dominance_holds": dom, "max_cdf_violation": max_viol,
-                "theory_prediction": theory_label(scope, dom)}
+                "dominance_cal": dom_cal, "max_cdf_violation_cal": viol_cal,
+                "dominance_test_side": dom_te, "max_cdf_violation_test": viol_te,
+                "theory_prediction": theory_label(scope, dom_cal)}
 
     # ---- 剂量 0 基线（scope 无关；= primary naive 锚点）
     row = run_cell(y_s[tr_idx], y_s[cal_idx], "none", 0.0, 0.0)
@@ -184,23 +196,29 @@ def main() -> None:
                              else "Einbinder 对齐设定（固定模型）"})
 
     out = pd.DataFrame(rows)
+    base_cov = float(out[(out["arm"] == "none")]["coverage"].iloc[0])
+    out["coverage_delta_vs_baseline"] = out["coverage"] - base_cov
     out.to_csv("results/stress_test_a.csv", index=False)
 
-    # ---- 对表摘要：理论保证 vs 观测覆盖（cal_only 档为主表）
-    print("\n=== Einbinder 对表（cal_only 档：固定模型理论对齐）===")
+    # ---- 对表摘要：机制预测（校准侧占优）vs 观测（cal_only 档为主表）
+    print("\n=== Einbinder 对表（cal_only 档：固定模型理论对齐；迁移修正读法）===")
     for arm in ARMS:
         for dose in DOSES:
             r = out[(out["arm"] == arm) & (out["dose_pct"] == dose)
                     & (out["scope"] == "cal_only")].iloc[0]
-            if r["dominance_holds"]:
-                flag = ("✓ 理论一致（保证成立，观测≥0.90）" if r["coverage"] >= 1 - ALPHA
-                        else "✗ 违反理论保证（占优成立但观测<0.90）")
+            if r["dominance_cal"]:
+                flag = ("✓ 机制一致（占优⇒q̂升⇒覆盖不低于基线）"
+                        if r["coverage"] >= base_cov else
+                        "✗ 机制预测落空（占优成立但覆盖低于基线）")
             else:
-                flag = "— 无保证域（占优不成立）"
+                flag = "— 无保证域（过程占优不成立）"
             print(f"[{arm} d={dose}%] 翻转 PD:{r['n_flipped_pd']}/HC:{r['n_flipped_hc']} "
-                  f"占优={r['dominance_holds']}（max ΔCDF={r['max_cdf_violation']:.4f}）"
-                  f"q̂偏移={r['qhat_shift']:+.4f} 覆盖={r['coverage']:.4f} "
-                  f"PD:{r['cpc_pd']:.4f} HC:{r['cpc_hc']:.4f} {flag}")
+                  f"占优(cal)={r['dominance_cal']}"
+                  f"（max ΔCDF={r['max_cdf_violation_cal']:.2e}）"
+                  f"q̂偏移={r['qhat_shift']:+.4f} 覆盖={r['coverage']:.4f}"
+                  f"（Δ基线{r['coverage_delta_vs_baseline']:+.4f}）"
+                  f"PD:{r['cpc_pd']:.4f} HC:{r['cpc_hc']:.4f} "
+                  f"集合大小={r['mean_size']:.2f} 单例率={r['singleton_rate']:.4f} {flag}")
     print("\n=== train_cal 档（部署读法，理论 n/a）===")
     for arm in ARMS:
         for dose in DOSES:
