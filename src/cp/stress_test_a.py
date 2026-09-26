@@ -103,12 +103,14 @@ def dominance_mixture(scores_own: np.ndarray, scores_opp: np.ndarray, y: np.ndar
 
 
 def theory_label(scope: str, dominance: bool) -> str:
+    if scope == "none":
+        return "baseline (no corruption)"
     if scope == "train_cal":
         return "n/a (model retrained; theory assumes fixed model)"
     if dominance:
-        return ("mechanism: quantile inflation predicted -> coverage >= clean-cal pipeline; "
-                "note: 1-alpha guarantee itself not directly applicable under transfer "
-                "(cal/test exchangeability broken)")
+        return ("mechanism: quantile inflation predicted in expectation over corruption "
+                "draws -> coverage >= clean-cal pipeline; note: 1-alpha guarantee itself "
+                "not directly applicable under transfer (cal/test exchangeability broken)")
     return ("no mechanism guarantee (process dominance violated; realized qhat may shift "
             "either way)")
 
@@ -207,9 +209,9 @@ def main() -> None:
             r = out[(out["arm"] == arm) & (out["dose_pct"] == dose)
                     & (out["scope"] == "cal_only")].iloc[0]
             if r["dominance_cal"]:
-                flag = ("✓ 机制一致（占优⇒q̂升⇒覆盖不低于基线）"
+                flag = ("✓ 机制一致（占优⇒期望层面 q̂ 升 ⇒ 覆盖不低于基线）"
                         if r["coverage"] >= base_cov else
-                        "✗ 机制预测落空（占优成立但覆盖低于基线）")
+                        "○ 单次实现偏离过程预测（期望层面占优成立，本次抽取 q̂ 下移）")
             else:
                 flag = "— 无保证域（过程占优不成立）"
             print(f"[{arm} d={dose}%] 翻转 PD:{r['n_flipped_pd']}/HC:{r['n_flipped_hc']} "
