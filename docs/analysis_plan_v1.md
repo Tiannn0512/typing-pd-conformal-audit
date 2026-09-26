@@ -21,10 +21,11 @@
 
 ## 2. 数据与队列（冻结）
 
-- 四库角色：MIT-CSXPD（临床金标准，合并源池主体 + RQ1 唯一场所）；TyPD（金标准，**纯外部应力测试集**，仅进 MIT→TyPD 探索性方向，不进任何校准池）；Tappy + Online English（自报大池）。
+- 四库角色：MIT-CSXPD（临床金标准，合并源池主体 + RQ1 唯一场所）；TyPD（金标准，**primary/合并链路中纯外部**：不进 primary 三方向与合并池方向的任何校准池，个案研究 MIT→TyPD 保持 TyPD 纯外部）；Tappy + Online English（自报大池）。
+  **TyPD 在 12 方向矩阵中的读法（v1.0.1 钉死）**：exploratory 的 TyPD-源方向（typd→mit/tappy/oe）使用 TyPD 内部校准（源域内部切分，与其他源一致），结果按 exploratory 如实报告——此为计划书 §2"12 方向全跑"的题中之义；"纯外部"条款管辖范围限定于 primary/合并/个案链路。
 - 合并临床标注源池 = MIT+TyPD（仅指标签来源/诊断质量合并，**不隐含成分数据集分布可交换**）；仅用于 RQ2 主终点方向 3 的源域。
 - **样本数唯一权威 = W3 冻结队列表**（results/cohort_flow.csv）：**eligible=475（PD 270/HC 205）**——MIT 82（42/40）、Tappy 173（133/40；无标签 29、单纯震颤 3 出队）、TyPD 27（12/15）、OE 193（83/110）。清洗 label-blind 全预登记（configs/cleaning.yaml，含 CHG-1）。
-- **不变量：One subject = one conformal observation**；人级分数 = 有效 session 分数中位数（worst-session 敏感性）。session 唯一性已在管线断言。
+- **不变量：One subject = one conformal observation**；人级分数 = 有效 session 分数中位数（worst-session 敏感性）。session 唯一性已在管线断言；session 级辅助分析须实测 ICC 与设计效应并标注 estimand。**全量 cell 结果公开**（primary/exploratory/个案无遗漏）。
 
 ## 3. 特征（冻结 + W4 预声明）
 
@@ -43,7 +44,7 @@
 ## 5. 共形方法（冻结）
 
 - 主方法：**split conformal**（二分类，score = 1 − 真类概率；k = ⌈(n+1)(1−α)⌉ 有限样本校正；实现 src/cp/conformal.py，与 MAPIE 1.5.0 逐点一致 1800/1800）。
-- 敏感性：CV+（理论保证 1−2α，已标注）。探索性（预注册零预期）：weighted CP（密度比权重；实现 = Tibshirani 2019 式(8) 直接形式，经 6-regime 独立 oracle 逐点对拍与 w≡1≡split 守卫——2026-09-26 复发猎杀后终版）、group-weighted CP（按设备/协议分组，引 EJS 2026 为 remediation benchmark）。
+- 敏感性：CV+（理论保证 1−2α，已标注）。探索性（预注册零预期）：weighted CP（密度比权重；实现 = Tibshirani 2019 式(8) 直接形式，经 6-regime 独立 oracle 逐点对拍与 w≡1≡split 守卫——2026-09-26 复发猎杀后终版；**权重截断 + 权重分布报告**为预登记细节）、group-weighted CP（按设备/协议分组，引 EJS 2026 为 remediation benchmark）。
 - 校准：源域受试者级分层切分；目标域重校准按预算梯度 **0/5/10/20/30%**（target calibration budget = 一级概念）。
 
 ## 6. 三分类判定规则（预注册，含重叠区钉死）
@@ -56,13 +57,14 @@
 - **重叠区归属（已钉死，2026-09-26 用户批准）**：{lo ≥ 0.80 且 hi < 0.90} 归 **Incompatible**。理由：与 0.90 主假设对齐、保住主战场检出力（π=0.85 gold_merged2self 方向检出力 0.884 vs Compatible 优先的 0.214）。拍板前对照模拟已入账（scripts/overlap_priority_compare.py + results/overlap_priority_compare.csv，commit 18fd308）；v1.3.2 条文顺序读法由本条显式取代，limitations 披露。
 - **判定对象声明**：判定的是"观测覆盖与预设审计阈值的统计相容性"，**不是对真实覆盖失败与否的断言**。
 - **阈值定性**：0.80 = pre-specified operational audit threshold（项目预设运行审计阈值），**非临床公认安全阈值**；"相容" ≠ "覆盖维持 90%"。
+- **结果无条件声明（预注册）**：Primary scientific outcomes are not conditioned on observing coverage degradation——三种判定（相容/不相容/证据不足）均为有效科学结果：补救成功=工程答案；补救失败=shift 非简单协变量型的证据；覆盖相容而判别下降=H1 最强支持。课题价值是 **mapping reliability behavior**，不是 finding failures。
 
 ## 7. Primary family（预注册主终点）
 
 - 构成：**3 方向 × α=0.10 × 总体覆盖**：① Tappy→MIT（n=85）② MIT→Tappy（n=227）③ 合并临床标注源池→自报合并（n≈457）。
 - 检验：family 内 **Holm** 校正；H0 = 真实覆盖 ≥0.90 单侧不足；family-wise 0.10；**判定基于 Holm 调整后 CI**。
-- **构成依据（功效模拟，已完成）**：results/power_table.csv（50,000 reps/cell，seed=20260925）——π=0.90 时 P(Undetermined) = 32.1% / 0.0% / 0.0%，全部 < 60% 降级阈值 → **零降级**，family 维持三方向。前向注记：Holm 调整后实际不可判定率 ≥ 表列边际值（tappy2mit 32.1% 为下界），判读按预登记规则处理。
-- MIT→TyPD（n=33）= **个案研究**（模拟显示 84.2% 不可判定，与冻结局限声明一致）；其余 8 方向 = **exploratory**（全清单 §13）。
+- **构成依据（功效模拟，已完成；双口径）**：计划书口径 results/power_table.csv（n=85/227/457/33）与**冻结队列表口径 results/power_table_frozen_n.csv（n=82/173/366/27——主判定依据）**；各 50,000 reps/cell，seed=20260925。冻结 n 下 π=0.90 时 P(Undetermined) = 28.6% / 1.6% / 0.0%，全部 < 60% 降级阈值 → **零降级**，family 维持三方向（计划书 n 口径方向一致：32.1%/0.0%/0.0%）。前向注记：Holm 调整后实际 P(Undetermined) ≥ 表列边际值（tappy2mit 28.6% 为下界），判读按预登记规则处理。
+- MIT→TyPD（冻结 n=27；功效模拟输入 n=33）= **个案研究**（模拟显示 P(Undetermined) 75.3%/84.2%，与冻结局限声明一致）；其余 **9 方向** = **exploratory**（全清单 §13）。
 
 ## 8. 安全性诊断终点（必报，不进 primary family）
 
@@ -114,6 +116,7 @@ TRIPOD-AI + CP 四要素；本文件 = OSF 预注册正文；合成单元测试�
 | 重叠区钉死 | Incompatible 优先（对照模拟先行入账 commit 18fd308） | 2026-09-26 |
 | W4 预声明 | L2/L3 补充基线为补充参照；gate 不重开、主参照不翻回（不可逆） | 2026-09-26 |
 | POL-1 | 轮次留档、不无痕覆盖制度 | 2026-09-26 |
+| v1.0.1 补丁 | 双口径 n 调和（补 power_table_frozen_n.csv）｜"其余 9 方向"勘误｜TyPD 12 方向矩阵读法钉死｜结果无条件声明补回｜weighted 权重截断+分布报告补回｜ICC/全量 cell 条款补回（审核门五必修+建议闭环） | 2026-09-26 |
 
 ## 17. 措辞禁令（全文适用）
 

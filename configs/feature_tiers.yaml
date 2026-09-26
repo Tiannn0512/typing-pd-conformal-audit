@@ -23,10 +23,10 @@ tiers:
 #   （标准指法分区；空格/特殊键不硬归属；OE 上档按基准键；不可映射剔除计数）——
 #   版本化附件入 W4 预注册；L2 层自冻结起可产出分析数字（先冻结后产出，用户指令）
 dataset_max_tier:
-  mit: 3     # 冻结协议 §2 转录；L3 无障碍（完整字符身份），L2 手别口径待 W4 冻结
+  mit: 3     # 冻结协议 §2 转录；L2/L3 口径已冻结（key_hand_mapping.yaml v1.0.0）
   tappy: 2   # 系统级钩子：原生左右手列，无字符身份（v1.3.2 三信号最小集）——L2 无口径缺口
   typd: 1    # 手机触屏：实测 schema 仅 press/release/pressure，无手别无字符 → L1 上限
-  oe: 3      # 冻结协议 §2 转录；L3 无障碍，L2 手别口径同 MIT 待 W4 冻结
+  oe: 3      # 冻结协议 §2 转录；L2/L3 口径同 MIT 已冻结（key_hand_mapping.yaml v1.0.0）
 
 # 跨库降档规则（冻结协议 §2：按目标库可用档位自动降档；档位作为覆盖衰减显式协变量记录）
 cross_dataset_rule: "tier(pair) = min(max_tier(source), max_tier(target))"
