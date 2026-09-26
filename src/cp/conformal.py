@@ -7,11 +7,13 @@ conformal，权重 w(x) = dP_target/dP_source 已知或可估）。
 
 实现注记：
 - split conformal 分位水平 k = ceil((n+1)(1−alpha))，k>n 时返回 +inf（预测全集，小校准诚实退化）
-- weighted conformal 逐候选标签条件（Tibshirani 2019 式(7)-(9) 精确阈值）：
-    含 y  ⟺  W_raw(s_y) ≤ (1−alpha)·T_raw − alpha·w_test
+- weighted conformal 逐候选标签条件（Tibshirani 2019 式(7) p 值规则的精确实现）：
+    含 y  ⟺  W_raw(s_y) + w_test > alpha·(T_raw + w_test)
   其中 W_raw(·) 为校准分数在原始密度比权重下的 ≤ 累计质量、T_raw = Σw_cal、w_test = 该测试点
-  密度比（候选点自身质量 w_test 进入测度与分母，见式(8)-(9)）。该阈值含 w_test 项，
-  具备论文的有限样本有效性；权重恒 1 时近似退化为标准 conformal 条件（差一阶自含项）。
+  密度比（候选点自身质量 w_test 同时进入分子与分母，见论文式(7)）。该规则具备论文的
+  有限样本有效性；w 恒 1 且连续分数时精确退化为标准 split 条件。已知局限：覆盖率类
+  Monte-Carlo 断言对本规则与保守近似的 ~0.001 量级差异不敏感——正确性由
+  tests/test_cp_synthetic.py 的暴力 oracle 逐点对拍保证（见该测试）。
 - 全部函数无 RNG、无拟合；分数由调用方给出（模型分数或解析后验）。
 """
 from __future__ import annotations
@@ -30,6 +32,8 @@ def split_conformal_quantile(scores_cal: np.ndarray, alpha: float) -> float:
     """有限样本校正分位数：sort 后第 k = ceil((n+1)(1−alpha)) 个次序统计量。"""
     scores_cal = np.asarray(scores_cal, dtype=float)
     n = len(scores_cal)
+    if n == 0:
+        raise ValueError("空校准集（上游 merge 零行 bug 几乎必然）——拒绝静默退化为全集")
     k = int(np.ceil((n + 1) * (1.0 - alpha)))
     if k > n:
         return float("inf")  # 校准集过小：诚实退化为全集
@@ -51,7 +55,8 @@ class WeightedConformal:
     """协变量偏移下已知密度比权重的 weighted conformal（Tibshirani et al. 2019）。
 
     fit 阶段：记录校准分数与原始权重累计质量，构建加权 CDF。
-    含 y 条件（Tibshirani 精确阈值，见模块 docstring）：W_raw(s_y) ≤ (1−α)·T_raw − α·w_test。
+    含 y 条件（Tibshirani 式(7) 精确 p 值规则，见模块 docstring）：
+        W_raw(s_y) + w_test > alpha·(T_raw + w_test)
     """
 
     def __init__(self, w_cal: np.ndarray, scores_cal: np.ndarray, alpha: float):
@@ -76,13 +81,17 @@ class WeightedConformal:
         return cdf[idx]
 
     def predict_sets(self, w_test_ratio: np.ndarray, probs_test: np.ndarray) -> list[frozenset[int]]:
-        """w_test_ratio：测试点密度比 w(x)（进入精确阈值 (1−α)T_raw − α·w_test，见模块 docstring）。"""
+        """w_test_ratio：测试点密度比 w(x)（进入式(7) 精确 p 值规则，见模块 docstring）。"""
         w_test = np.asarray(w_test_ratio, dtype=float)
+        if np.any(~np.isfinite(w_test)) or np.any(w_test < 0):
+            raise ValueError("测试点权重必须非负且有限")
         s_all = 1.0 - np.asarray(probs_test, dtype=float)  # (n_test, 2) 每候选标签分数
+        if np.any(~np.isfinite(s_all)):
+            raise ValueError("probs_test 含非有限值")
         W = self._weighted_cdf_raw(s_all.ravel()).reshape(s_all.shape)
-        thresholds = (1.0 - self.alpha) * self._t_raw - self.alpha * w_test  # (n_test,)
+        # 式(7)：p 值 = (W_raw(s_y) + w_test) / (T_raw + w_test) > alpha
         sets = []
-        for row_w, thr in zip(W, thresholds):
-            labels = {y for y, w_val in enumerate(row_w) if w_val <= thr}
+        for row_w, wt in zip(W, w_test):
+            labels = {y for y, w_val in enumerate(row_w) if w_val + wt > self.alpha * (self._t_raw + wt)}
             sets.append(frozenset(labels))
         return sets

@@ -7,6 +7,10 @@
 
 全部确定性（seeds 来自 configs/seeds.yaml 的 unit_test_seed）；无模型拟合（解析分数），
 统计功效来自大样本重复。MAPIE 对拍为一次性验证（scripts/mapie_crosscheck.py），不在本文件。
+
+已知局限（2026-09-26 审核 A 登记）：覆盖率类 Monte-Carlo 断言（②③）对实现规则间 ~0.001
+量级差异不敏感——weighted 路径的正确性由 test_4_bruteforce_oracle 逐点对拍保证（覆盖率
+断言只兜"数量级正确"，不兜"公式精确"）。
 """
 from __future__ import annotations
 
@@ -168,3 +172,55 @@ def test_3_weighted_cp_covariate_shift_recovery():
     # naive 在同一偏移下必须显著失准（方向随偏移构造：均值上移→过覆盖；取方向无关幅度）
     sigma_n = cov_naive.std(ddof=1) / np.sqrt(trials)
     assert abs(cov_naive.mean() - (1 - ALPHA)) >= max(5 * sigma_n, 0.01),         f"naive split 在偏移下覆盖 {cov_naive.mean():.4f} 未失准？"
+
+
+# ---------- ④ weighted CP 暴力 oracle（公式精确性的唯一防线） ----------
+
+def _bruteforce_weighted_sets(w_cal, scores_cal, w_test, probs_test, alpha):
+    """显式构造 n+1 加权点（校准 + 候选），按式(7) p 值规则逐点判定——与实现无共享代码。"""
+    T_raw = float(np.sum(w_cal))
+    sets = []
+    for wt, row in zip(w_test, np.asarray(probs_test, dtype=float)):
+        labels = set()
+        for y, p_y in enumerate(row):
+            s_y = 1.0 - p_y
+            mass = wt + float(np.sum(w_cal[scores_cal <= s_y]))
+            if mass > alpha * (T_raw + wt):
+                labels.add(y)
+        sets.append(frozenset(labels))
+    return sets
+
+
+def test_4_weighted_cp_bruteforce_oracle():
+    """实现 vs 暴力法逐点一致（100%）：三种权重 regime（单位/随机/极端大 w_test）。"""
+    from cp.conformal import WeightedConformal
+    rng = np.random.default_rng(SEED)
+    n_cal = 50
+    for regime in ("ones", "random", "heavy_w_test"):
+        x_cal = rng.standard_normal(n_cal)
+        y_cal = (rng.random(n_cal) < _analytic_probs(x_cal)[:, 1]).astype(int)
+        scores_cal = lac_scores(_analytic_probs(x_cal), y_cal)
+        n_te = 200
+        x_te = rng.standard_normal(n_te) + 1.0
+        probs_te = _analytic_probs(x_te)
+        if regime == "ones":
+            w_cal, w_te = np.ones(n_cal), np.ones(n_te)
+        elif regime == "random":
+            w_cal = rng.uniform(0.2, 5.0, n_cal)
+            w_te = rng.uniform(0.2, 5.0, n_te)
+        else:
+            w_cal = np.exp(x_cal - 0.5)
+            w_te = np.full(n_te, 25.0)  # 极端大 w_test（上轮击穿保证的 regime）
+        impl = WeightedConformal(w_cal, scores_cal, ALPHA).predict_sets(w_te, probs_te)
+        oracle = _bruteforce_weighted_sets(w_cal, scores_cal, w_te, probs_te, ALPHA)
+        assert impl == oracle, f"regime={regime}: 实现与暴力 oracle 不一致"
+
+
+def test_5_digraph_derive_hold_col_none_guard():
+    """hold_col=None 生产配置（MIT 官方 f1 口径依赖）：不覆盖既有 hold 列。"""
+    from data.digraph_derive import add_digraph_timing
+    df = pd.DataFrame({"press_ms": [100.0, 260.0], "release_ms": [180.0, 300.0],
+                       "hold_ms": [777.0, 888.0]})
+    out = add_digraph_timing(df, "press_ms", "release_ms", group_cols=None, hold_col=None)
+    assert out["hold_ms"].tolist() == [777.0, 888.0]  # 未被覆盖
+    assert np.isnan(out["latency_ms"][0]) and out["latency_ms"][1] == 80.0

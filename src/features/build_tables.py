@@ -50,10 +50,13 @@ PRESS_COL = {"mit": "press_ms", "typd": "press_ms", "oe": "keydown", "tappy": No
 
 
 def load_labels() -> dict[str, pd.DataFrame]:
-    """标签旁表 → 统一 schema(subject, label_pd, tremor_only, label_source)。仅在 ⑦ 使用。"""
+    """标签旁表 → 统一 schema(subject, label_pd, tremor_only, label_source)。仅在 ⑦ 使用。
+    NaN 防护（2026-09-26 终审 B/F1 修正）：对**原始源列**在比较强转之前断言——
+    比较运算会把 NaN 静默转 False（标签缺失滑入 HC 组），对派生列断言永远不触发。"""
     mit = []
     for cs in ("MIT-CS1PD", "MIT-CS2PD"):
         df = pd.read_csv(INTERIM.parent / "raw" / "mit" / cs / f"GT_DataPD_{cs}.csv")
+        assert df["gt"].notna().all(), f"{cs} GT gt 列含 NaN"
         for _, r in df.iterrows():
             # gt 列被 read_csv 自动推断为 bool（或保持 "True" 字符串）——双态兼容
             gt = r["gt"]
@@ -61,6 +64,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
             mit.append({"subject": str(int(r["pID"])), "label_pd": label_pd,
                         "tremor_only": False, "label_source": "clinical"})
     typd = pd.read_csv(INTERIM / "typd_clinical.csv")
+    assert typd["Group"].notna().all(), "typd 临床表 Group 列含 NaN"
     typd = pd.DataFrame({
         "subject": typd["subject"],
         "label_pd": typd["Group"] == "PD",
@@ -68,6 +72,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "label_source": "clinical",
     })
     tappy = pd.read_csv(INTERIM / "tappy_users.csv")
+    assert tappy["Parkinsons"].notna().all() and tappy["Tremors"].notna().all(),         "tappy 标签表 Parkinsons/Tremors 含 NaN"
     tappy = pd.DataFrame({
         "subject": tappy["subject"].astype(str),
         "label_pd": tappy["Parkinsons"] == True,   # noqa: E712
@@ -75,6 +80,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "label_source": "self_report",
     })
     oe = pd.read_csv(INTERIM / "oe_subjects.csv")
+    assert oe["diagnosis"].notna().all(), "oe_subjects diagnosis 列含 NaN"
     oe = pd.DataFrame({
         "subject": oe["subject"].astype(str),
         "label_pd": oe["diagnosis"] == 1,
@@ -82,8 +88,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "label_source": "self_report",
     })
     out = {"mit": pd.DataFrame(mit), "typd": typd, "tappy": tappy, "oe": oe}
-    # 标签 NaN 防护（合并终审 B/发现3：NaN==True→False 会静默扩 HC 组；当前数据零 NaN，
-    # 任何数据刷新若引入 NaN 则在此响亮失败）
+    # 标签 NaN 防护第二层（源列断言见上；此处派生列断言对 bool 列恒真、对 subject 列有效）
     for name, df_lab in out.items():
         assert df_lab["subject"].notna().all(), f"{name} 标签表 subject 含 NaN"
         assert df_lab["label_pd"].notna().all(), f"{name} 标签表 label_pd 含 NaN"
