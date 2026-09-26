@@ -31,6 +31,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from data.digraph_derive import add_digraph_timing
+
 USECOLS = ["key", "response_id", "participant_id", "sentence_id", "diagnosis", "keydown", "keyup"]
 
 
@@ -61,10 +66,9 @@ def main() -> None:
     # response 内成立；按 sentence 分组会把同句的多次 response 串成假 digraph
     # （2026-09-25 审核实测：10 组跨 response 合并、659 个假 digraph 可穿透清洗规则）。
     # session 定义随之 = participant × response（与 Tappy 月文件 = session 的口径同级）。
-    df = df.sort_values(["participant_id", "response_id", "keydown"], kind="mergesort").reset_index(drop=True)
+    df = add_digraph_timing(df, "keydown", "keyup",
+                            group_cols=["participant_id", "response_id"], hold_col=None)
     g = df.groupby(["participant_id", "response_id"], sort=False)
-    df["latency_ms"] = (df["keydown"] - g["keyup"].shift(1)).astype("float32")
-    df["flight_ms"] = (df["keydown"] - g["keydown"].shift(1)).astype("float32")
     df["char_from"] = g["key"].shift(1)
     df["char_to"] = df["key"]
 

@@ -41,6 +41,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from data.digraph_derive import add_digraph_timing
+
 # ---- 官方 filtData 正则（原样复制，含引号锚定）----
 P_MOUSE = re.compile(r'("mouse.+")')
 P_LONG_META = re.compile(r'("Shift.+")|("Alt.+")|("Control.+")')
@@ -101,8 +106,8 @@ def parse_session_file(path: Path) -> dict:
             "hold_ms": ht * 1000.0,
         }
     )
-    df["latency_ms"] = df["press_ms"] - df["release_ms"].shift(1)
-    df["flight_ms"] = df["press_ms"] - df["press_ms"].shift(1)
+    # latency/flight 用共享规范派生（hold 保持官方 f1 口径，hold_col=None 不覆盖）
+    df = add_digraph_timing(df, "press_ms", "release_ms", group_cols=None, hold_col=None)
     df["char_from"] = df["char"].shift(1)
     df["char_to"] = df["char"]
     # 官方过滤（sanityCheck + autoFilt）已在上方完成，落表行全部为 keep

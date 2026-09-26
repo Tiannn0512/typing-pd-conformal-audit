@@ -23,3 +23,7 @@ stress_seed_base: 1
 
 # CP 合成单元测试（tests/test_cp_synthetic.py）：独立固定 seed，测试必须确定性
 unit_test_seed: 20260925
+
+# 对拍脚本衍生 seed（2026-09-26 登记，消除"现场发明 seed"审核发现）
+derived_seeds:
+  mapie_crosscheck_second_split: 20260926  # scripts/mapie_crosscheck.py 第二重切分 = unit_test_seed + 1
