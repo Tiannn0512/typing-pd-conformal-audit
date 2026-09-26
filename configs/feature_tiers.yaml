@@ -60,3 +60,10 @@ changelog:
   - id: FEATURE-DEF-1
     date: "2026-09-26"
     note: "L2/L3 具体列定义在 Tier 结果产出前冻结登记（手别映射表 v1.0.0 冻结后解除产出禁令）"
+
+  - id: DEC-T1
+    date: "2026-09-26"
+    note: "迁移矩阵 LGBM 对照列（CHG-P1 对照模型）参数规则：min_child_samples = "
+          "max(1, floor(n_train/4))（按各方向实际训练折规模锁定，非搜索）；max_depth=3；"
+          "n_estimators 默认。对照状态披露：LGBM 列仅作 0.85 锚点偏离的模型差异参照，"
+          "主判定/主参照不变（LR）。gate 偏离决策：矩阵按预注册特征集原样入账（选项 1，用户批准）"

@@ -28,6 +28,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from lightgbm import LGBMClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from cp.conformal import lac_scores, predict_sets_split  # noqa: E402
@@ -65,6 +66,18 @@ def load_matrix(ds: str, tier: int) -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
+def sixtuple(sets, y_t, scores_pos, y_obs=None) -> dict:
+    """六元组（预注册 §1）：覆盖/PD类条件/HC类条件/平均集合大小/单例/模糊/空 + AUC。"""
+    hits = np.array([y in s for y, s in zip(y_t, sets)])
+    sizes = np.array([len(s) for s in sets])
+    out = {"coverage": hits.mean(), "cpc_pd": hits[y_t == 1].mean(),
+           "cpc_hc": hits[y_t == 0].mean(), "mean_size": sizes.mean(),
+           "singleton_rate": (sizes == 1).mean(), "fuzzy_rate": (sizes == 2).mean(),
+           "empty_rate": (sizes == 0).mean(),
+           "auc": roc_auc_score(y_t, scores_pos)}
+    return out
+
+
 def main() -> None:
     seeds = yaml.safe_load((Path(__file__).resolve().parents[2] / "configs" / "seeds.yaml")
                            .read_text(encoding="utf-8"))["split_seeds"]
@@ -78,33 +91,45 @@ def main() -> None:
             X_t, y_t = load_matrix(tgt, tier)
             acc = {k: [] for k in ("coverage", "cpc_pd", "cpc_hc", "mean_size",
                                    "singleton_rate", "fuzzy_rate", "empty_rate", "auc")}
+            acc_lgbm = {k: [] for k in acc}
             for seed in seeds:
                 idx = np.arange(len(X_s))
                 tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=seed,
                                                    stratify=y_s)
                 scaler = StandardScaler().fit(X_s[tr_idx])
-                clf = LogisticRegression(random_state=42, max_iter=1000).fit(
-                    scaler.transform(X_s[tr_idx]), y_s[tr_idx])
-                scores_cal = lac_scores(clf.predict_proba(scaler.transform(X_s[cal_idx])), y_s[cal_idx])
-                sets = predict_sets_split(scores_cal, clf.predict_proba(scaler.transform(X_t)), ALPHA)
-                hits = np.array([y in s for y, s in zip(y_t, sets)])
-                sizes = np.array([len(s) for s in sets])
-                acc["coverage"].append(hits.mean())
-                acc["cpc_pd"].append(hits[y_t == 1].mean())
-                acc["cpc_hc"].append(hits[y_t == 0].mean())
-                acc["mean_size"].append(sizes.mean())
-                acc["singleton_rate"].append((sizes == 1).mean())
-                acc["fuzzy_rate"].append((sizes == 2).mean())
-                acc["empty_rate"].append((sizes == 0).mean())
-                acc["auc"].append(roc_auc_score(y_t, clf.predict_proba(scaler.transform(X_t))[:, 1]))
+                X_tr_s, X_cal_s, X_te_s = (scaler.transform(X_s[tr_idx]),
+                                           scaler.transform(X_s[cal_idx]),
+                                           scaler.transform(X_t))
+
+                # 主参照 LR（CHG-P1）
+                clf = LogisticRegression(random_state=42, max_iter=1000).fit(X_tr_s, y_s[tr_idx])
+                scores_cal = lac_scores(clf.predict_proba(X_cal_s), y_s[cal_idx])
+                sets = predict_sets_split(scores_cal, clf.predict_proba(X_te_s), ALPHA)
+                for k, v in sixtuple(sets, y_t, clf.predict_proba(X_te_s)[:, 1]).items():
+                    acc[k].append(v)
+
+                # LGBM 对照（DEC-T1：参数按 n_train 约束规则锁定，非搜索；完整六元组，用户指令）
+                mcs = max(1, int(len(tr_idx) // 4))
+                lgbm = LGBMClassifier(random_state=42, verbose=-1,
+                                      min_child_samples=mcs, max_depth=3).fit(X_tr_s, y_s[tr_idx])
+                proba_l = lgbm.predict_proba(X_te_s)
+                if len(np.unique(np.round(proba_l[:, 1], 12))) == 1:
+                    raise RuntimeError(f"{src}2{tgt} seed={seed}: LGBM 对照列常数预测（机制性退化）")
+                scores_cal_l = lac_scores(lgbm.predict_proba(X_cal_s), y_s[cal_idx])
+                sets_l = predict_sets_split(scores_cal_l, proba_l, ALPHA)
+                for k, v in sixtuple(sets_l, y_t, proba_l[:, 1]).items():
+                    acc_lgbm[k].append(v)
             rows.append({
                 "direction": f"{src}2{tgt}", "source": src, "target": tgt, "tier": tier,
                 "n_source": len(X_s), "n_target": len(X_t),
                 **{f"{k}_mean": float(np.mean(v)) for k, v in acc.items()},
                 **{f"{k}_std": float(np.std(v, ddof=1)) for k, v in acc.items()},
+                **{f"lgbm_{k}_mean": float(np.mean(v)) for k, v in acc_lgbm.items()},
+                **{f"lgbm_{k}_std": float(np.std(v, ddof=1)) for k, v in acc_lgbm.items()},
             })
-            print(f"[transfer] {src}2{tgt} tier=L{tier} AUC={np.mean(acc['auc']):.4f} "
-                  f"cov={np.mean(acc['coverage']):.4f} size={np.mean(acc['mean_size']):.3f}")
+            print(f"[transfer] {src}2{tgt} tier=L{tier} LR: AUC={np.mean(acc['auc']):.4f} "
+                  f"cov={np.mean(acc['coverage']):.4f} size={np.mean(acc['mean_size']):.3f} | "
+                  f"LGBM: AUC={np.mean(acc_lgbm['auc']):.4f} cov={np.mean(acc_lgbm['coverage']):.4f}")
 
     table = pd.DataFrame(rows)
     Path("results").mkdir(exist_ok=True)
