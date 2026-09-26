@@ -19,9 +19,9 @@ tiers:
 # 每库可用档位上限
 # typd=1 的机器验证依据：src/data/validate_schema.py --all 断言 typd_events.parquet
 # 无 hand*/char*/key 列（2026-09-25 实测通过，见 data/interim/parse_reports/schema_validation.json）
-# ⚠ MIT/OE 的手别口径：键位→左右手映射尚未定义（冻结文档无记载、代码未实现）——
-#   属 researcher degrees of freedom，须在 W4 预注册前落成版本化映射表并纳入预注册附件；
-#   在此之前 mit:3/oe:3 的 L2 层不得产出任何分析数字
+# ✅ MIT/OE 的手别口径已冻结（2026-09-26）：configs/key_hand_mapping.yaml v1.0.0
+#   （标准指法分区；空格/特殊键不硬归属；OE 上档按基准键；不可映射剔除计数）——
+#   版本化附件入 W4 预注册；L2 层自冻结起可产出分析数字（先冻结后产出，用户指令）
 dataset_max_tier:
   mit: 3     # 冻结协议 §2 转录；L3 无障碍（完整字符身份），L2 手别口径待 W4 冻结
   tappy: 2   # 系统级钩子：原生左右手列，无字符身份（v1.3.2 三信号最小集）——L2 无口径缺口

@@ -85,5 +85,6 @@ change_log:
 deferred_decisions:
   - id: DEF-1
     item: "OE 精确重复事件行（participating=2,063 / redundant=1,203，占 keep 行 0.27%）是否去重"
-    status: "显式挂起（2026-09-26 合并终审 C/缺口1 登记为正式决策项）；当前行为 = 保留重复入池"
-    deadline: "W4 预注册冻结前必须定案（TODO-3.4）；定案后在此登记 + limitations 披露"
+    status: "**定案（2026-09-26 用户批准）：保留原样（不去重）** + 论文 limitations 披露。
+             理由：占比 0.27% 且此时去重属结果后决策；保留为唯一不受结果左右的选项。"
+    deadline: "已定案（原 deadline W4 前提前完成）"

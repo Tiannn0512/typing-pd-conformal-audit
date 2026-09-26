@@ -39,10 +39,12 @@
 - 上界 < 0.90 → **Incompatible（不相容，覆盖退化证据）**；
 - 其间 → **Undetermined（证据不足）**。
 
-> ⚠ **W4 冻结必钉项（2026-09-26 TODO-3.3 审核发现）**：重叠区 {下界 ≥ 0.80 且 上界 < 0.90}
->（如 CI=[0.82,0.88]）同时满足前两条，冻结文本未定义归属。两种读法在 π=0.85 的
-> gold_merged2self 方向差 57pp（代码现状=Incompatible 优先 0.884 vs first-match
-> Compatible 优先 0.786）。W4 写 analysis_plan_v1.md 时必须显式钉死一种并留变更记录。
+> ✅ **重叠区归属已钉死（2026-09-26 用户批准）：Incompatible 优先**——hi < 0.90 →
+> Incompatible；否则 lo ≥ 0.80 → Compatible；否则 Undetermined（现行 classify() 即此口径，
+> 无需改代码）。理由：与 0.90 主假设对齐、保住主战场检出力（π=0.85 gold_merged2self：
+> 0.884 vs 0.214）。拍板前对照模拟已先行入账：scripts/overlap_priority_compare.py +
+> results/overlap_priority_compare.csv（commit 18fd308）。v1.3.2 冻结文本的条文顺序读法
+>（Compatible 优先）由本条显式取代，limitations 披露。
 
 **判定对象声明**：判定的是"观测覆盖与预设审计阈值的统计相容性"，**不是对真实覆盖失败与否的断言**——标题与结论不得读成"CP 在部署偏移下失败了"。
 **阈值定性**：0.80 = pre-specified operational audit threshold（项目预设运行审计阈值），**非临床公认安全阈值**，全文禁用"临床安全阈值"表述。
