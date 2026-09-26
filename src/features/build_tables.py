@@ -256,6 +256,13 @@ def main() -> None:
         sess_all.append(sess_stat)
         raw_subjects[dataset] = subj_set
 
+    # FEATURE-DEF-2：导出 S1-S6 清洗终池事件表（L2/L3 特征的冻结事件基，2026-09-26 用户批准）
+    final_pool = pd.concat(
+        [f.assign(subject=f["subject"].astype(str)) for f in finals.values()],
+        ignore_index=True)
+    INTERIM.mkdir(parents=True, exist_ok=True)
+    final_pool.to_parquet(INTERIM / "final_digraphs.parquet", index=False)
+
     # ⑦ 队列定义（标签在此才介入）
     labels = load_labels()
     subj_rows = []
