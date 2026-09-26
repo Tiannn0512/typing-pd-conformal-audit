@@ -138,7 +138,7 @@ def main() -> None:
                             if r["direction"] == direction and r["method"] == "gold_direct")
                 deltas = {f"delta_{c}": m[c] - gold[c] for c in DELTA_COLS}
             rows.append({"direction": direction, "method": method, "budget_pct": budget,
-                         "n_target_labels": n_labels, **m, **deltas,
+                         "n_target_labels": n_labels, **m, **deltas, "qhat_inf": q_inf,
                          "point_ge_090": bool(m["coverage"] >= 0.90),
                          "point_ge_080": bool(m["coverage"] >= 0.80),
                          "cilo_ge_080": bool(m["ci_lo"] >= 0.80),
@@ -197,11 +197,12 @@ def main() -> None:
         for _, r in sub[sub["method"] != "gold_direct"].iterrows():
             bl = f" b={int(r['budget_pct'])}%({int(r['n_target_labels'])}标注)" \
                 if r["method"] == "target_recalib" else "（0 标注）"
+            deg = " [退化:全集,名义旗标无意义]" if r["qhat_inf"] else ""
             print(f"  {r['method']:<15}{bl:<16} 覆盖={r['coverage']:.4f}"
                   f"（Δ{r['delta_coverage']:+.4f}）PD={r['cpc_pd']:.4f}"
                   f"（Δ{r['delta_cpc_pd']:+.4f}）HC={r['cpc_hc']:.4f}"
                   f"（Δ{r['delta_cpc_hc']:+.4f}）"
-                  f" 点≥0.80={r['point_ge_080']} CI下界≥0.80={r['cilo_ge_080']}")
+                  f" 点≥0.80={r['point_ge_080']} CI下界≥0.80={r['cilo_ge_080']}{deg}")
 
     rep = {"predeclarations": __doc__.split("实现级预声明")[1].split("产出")[0].strip(),
            "draw_seed": DRAW_SEED, "rows": rows}
