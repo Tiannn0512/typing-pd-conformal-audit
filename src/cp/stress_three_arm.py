@@ -123,6 +123,9 @@ def main() -> None:
     assert int(ph["k"]) == m_b["k"] and int(ph["n"]) == m_b["n"]
     for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
         assert abs(float(ph[col]) - m_b[col]) < 1e-12, f"基线 {col} 漂移"
+    m_b["reproduced"] = True  # 基线即表型本身（断言已证逐位相等）
+    m_b["delta_coverage_vs_phenotype"] = 0.0
+    m_b["delta_mean_size_vs_phenotype"] = 0.0
     rows.append({"arm": "baseline", "scope": "none", "n_pool": n_pool,
                  "n_pd_pool": n_pd, "n_hc_pool": n_hc, "realized_prev": n_pd / n_pool,
                  "n_flip_pd": 0, "n_flip_hc": 0, **m_b, "note": "= primary 锚点（双断言）"})
