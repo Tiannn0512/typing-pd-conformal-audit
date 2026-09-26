@@ -24,8 +24,8 @@
      "非对称"的字面成立）。scope 分档（plan §10）：cal_only（训练标签干净、仅校准
      标签翻转）/ train_cal（训练+校准同翻）。
   4. 臂 3（both）：臂 1 重采样池（57 人）+ 等计数翻转，计数与 57 人池的位移质量
-     匹配：x' = round((0.74−0.5122)·57/2) = 6/向（rates 14.3%/40%——HC 侧重Payload
-     为池收缩的必然结果，如实报告）；同两 scope。
+     匹配：x' = round((0.74−0.5122)·57/2) = 6/向（rates 14.3%/40%——HC 侧重为池收缩
+     的必然结果，如实报告）；同两 scope。
   5. 抽取随机性：单 numpy default_rng(1)（stress_seed_base），消耗顺序固定：
      ①臂 1 抽 15 HC（40 池，replace=False）→ ②臂 2 抽 9 PD + 9 HC（原池）→
      ③臂 3 抽 6 PD（42 池）+ 6 HC（臂 1 重采样池内 15 HC）。切分/模型与 primary
@@ -123,6 +123,12 @@ def main() -> None:
     assert int(ph["k"]) == m_b["k"] and int(ph["n"]) == m_b["n"]
     for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
         assert abs(float(ph[col]) - m_b[col]) < 1e-12, f"基线 {col} 漂移"
+    rc = pd.read_csv("results/recovery_cost_table.csv")
+    rc_naive = rc[(rc["direction"] == "mit2tappy") & (rc["method"] == "naive_cp")].iloc[0]
+    assert int(rc_naive["k"]) == m_b["k"] and int(rc_naive["n"]) == m_b["n"], \
+        "基线与 4.4 recovery_cost naive 行漂移"
+    for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
+        assert abs(float(rc_naive[col]) - m_b[col]) < 1e-12, f"基线 vs 4.4 {col} 漂移"
     m_b["reproduced"] = True  # 基线即表型本身（断言已证逐位相等）
     m_b["delta_coverage_vs_phenotype"] = 0.0
     m_b["delta_mean_size_vs_phenotype"] = 0.0
