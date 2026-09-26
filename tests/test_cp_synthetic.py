@@ -174,46 +174,77 @@ def test_3_weighted_cp_covariate_shift_recovery():
     assert abs(cov_naive.mean() - (1 - ALPHA)) >= max(5 * sigma_n, 0.01),         f"naive split 在偏移下覆盖 {cov_naive.mean():.4f} 未失准？"
 
 
-# ---------- ④ weighted CP 暴力 oracle（公式精确性的唯一防线） ----------
+# ---------- ④ weighted CP 独立 oracle（论文式(8) 广义逆分位数构造） ----------
 
-def _bruteforce_weighted_sets(w_cal, scores_cal, w_test, probs_test, alpha):
-    """显式构造 n+1 加权点（校准 + 候选），按式(7) p 值规则逐点判定——与实现无共享代码。"""
+def _paper_eq8_sets(w_cal, scores_cal, w_test, probs_test, alpha):
+    """式(8) 直接构造：C(x) = {y: V_y ≤ Quantile(1−α; Σp_i δ_{V_i} + p_{n+1} δ_∞)}。
+
+    与实现无共享代数：先算混合分布的 (1−α)-广义逆分位数（∞ 原子 → w_test/Σw > α 时
+    分位数 = +∞ → 全集），再逐候选比较。历史教训（2026-09-26 复发猎杀 A/B）：oracle
+    若转写实现公式则对该类缺陷恒真——本构造从论文定义出发，结构不同源。
+    """
     T_raw = float(np.sum(w_cal))
+    order = np.argsort(scores_cal, kind="mergesort")
+    v_sorted = np.asarray(scores_cal, dtype=float)[order]
+    w_sorted = np.asarray(w_cal, dtype=float)[order]
     sets = []
     for wt, row in zip(w_test, np.asarray(probs_test, dtype=float)):
-        labels = set()
-        for y, p_y in enumerate(row):
-            s_y = 1.0 - p_y
-            mass = wt + float(np.sum(w_cal[scores_cal <= s_y]))
-            if mass > alpha * (T_raw + wt):
-                labels.add(y)
+        # 逐测试点原子质量：p_self = w_test/(T_raw + w_test)，校准质量 p_i = w_i/(T_raw + w_test)
+        # Q = inf{z: 校准≤z 质量分数 ≥ 1−α}；校准总质量 T_raw 达不到 1−α(T_raw+wt)
+        #（⟺ wt > α·T_raw/(1−α)）时 Q = +∞ → 全集（2026-09-26 drift regime 16 点解剖教训）
+        if T_raw < (1 - alpha) * (T_raw + wt):
+            sets.append(frozenset(range(len(row))))
+            continue
+        cdf = np.cumsum(w_sorted) / (T_raw + wt)
+        hit = np.searchsorted(cdf, 1 - alpha, side="left")
+        q = v_sorted[min(hit, len(v_sorted) - 1)]
+        labels = {y for y, p_y in enumerate(row) if (1.0 - p_y) <= q}
         sets.append(frozenset(labels))
     return sets
 
 
-def test_4_weighted_cp_bruteforce_oracle():
-    """实现 vs 暴力法逐点一致（100%）：三种权重 regime（单位/随机/极端大 w_test）。"""
+def test_4_weighted_cp_paper_eq8_oracle():
+    """实现 vs 式(8) 独立构造逐点一致（100%）：6 个 regime。
+
+    regime 设计（2026-09-26 复发猎杀 A/B 教训）：heavy_w_test 对方向反转零鉴别力
+    （两规则都退化为全集）——必须含 ties（钉 side 语义）、小 w_test（放大分子差异）、
+    drift（真实偏移权重）。"""
     from cp.conformal import WeightedConformal
     rng = np.random.default_rng(SEED)
-    n_cal = 50
-    for regime in ("ones", "random", "heavy_w_test"):
-        x_cal = rng.standard_normal(n_cal)
-        y_cal = (rng.random(n_cal) < _analytic_probs(x_cal)[:, 1]).astype(int)
-        scores_cal = lac_scores(_analytic_probs(x_cal), y_cal)
-        n_te = 200
-        x_te = rng.standard_normal(n_te) + 1.0
-        probs_te = _analytic_probs(x_te)
-        if regime == "ones":
-            w_cal, w_te = np.ones(n_cal), np.ones(n_te)
-        elif regime == "random":
-            w_cal = rng.uniform(0.2, 5.0, n_cal)
-            w_te = rng.uniform(0.2, 5.0, n_te)
-        else:
-            w_cal = np.exp(x_cal - 0.5)
-            w_te = np.full(n_te, 25.0)  # 极端大 w_test（上轮击穿保证的 regime）
+    n_cal = 60
+    regimes = {}
+    x_cal = rng.standard_normal(n_cal)
+    y_cal = (rng.random(n_cal) < _analytic_probs(x_cal)[:, 1]).astype(int)
+    scores_cal = lac_scores(_analytic_probs(x_cal), y_cal)
+    x_te = rng.standard_normal(250) + 0.8
+    probs_te = _analytic_probs(x_te)
+    regimes["ones"] = (np.ones(n_cal), np.ones(250))
+    regimes["random"] = (rng.uniform(0.2, 5.0, n_cal), rng.uniform(0.2, 5.0, 250))
+    regimes["drift"] = (np.exp(x_cal - 0.5), np.exp(x_te - 0.5))
+    regimes["ties"] = (np.round(rng.uniform(0.2, 5.0, n_cal), 0), np.full(250, 2.0))
+    regimes["small_w_test"] = (np.exp(x_cal - 0.5), np.full(250, 0.05))
+    regimes["heavy_w_test"] = (np.exp(x_cal - 0.5), np.full(250, 25.0))
+    for regime, (w_cal, w_te) in regimes.items():
         impl = WeightedConformal(w_cal, scores_cal, ALPHA).predict_sets(w_te, probs_te)
-        oracle = _bruteforce_weighted_sets(w_cal, scores_cal, w_te, probs_te, ALPHA)
-        assert impl == oracle, f"regime={regime}: 实现与暴力 oracle 不一致"
+        oracle = _paper_eq8_sets(w_cal, scores_cal, w_te, probs_te, ALPHA)
+        mism = sum(a != b for a, b in zip(impl, oracle))
+        assert mism == 0, f"regime={regime}: {mism}/{len(impl)} 点与式(8) 构造不一致"
+
+
+def test_6_weighted_ones_equals_split_pointwise():
+    """守卫不变量（复发猎杀 A/F3）：w 恒 1 时 weighted 集合与 split 逐点一致。
+
+    该测试单独即可拦住尾方向反转（上轮实现 204/250 分歧在此必 FAIL）。"""
+    from cp.conformal import predict_sets_split, WeightedConformal
+    rng = np.random.default_rng(SEED)
+    x_cal = rng.standard_normal(300)
+    y_cal = (rng.random(300) < _analytic_probs(x_cal)[:, 1]).astype(int)
+    scores_cal = lac_scores(_analytic_probs(x_cal), y_cal)
+    x_te = rng.standard_normal(400)
+    probs_te = _analytic_probs(x_te)
+    sets_w = WeightedConformal(np.ones(300), scores_cal, ALPHA).predict_sets(np.ones(400), probs_te)
+    sets_s = predict_sets_split(scores_cal, probs_te, ALPHA)
+    assert sets_w == sets_s, "w≡1 时 weighted 与 split 逐点不一致（尾方向/边界缺陷）"
 
 
 def test_5_digraph_derive_hold_col_none_guard():
@@ -223,4 +254,33 @@ def test_5_digraph_derive_hold_col_none_guard():
                        "hold_ms": [777.0, 888.0]})
     out = add_digraph_timing(df, "press_ms", "release_ms", group_cols=None, hold_col=None)
     assert out["hold_ms"].tolist() == [777.0, 888.0]  # 未被覆盖
+    assert list(out.columns) == ["press_ms", "release_ms", "hold_ms", "latency_ms", "flight_ms"],         f"列集漂移（守卫旁路会写入垃圾列）: {list(out.columns)}"
     assert np.isnan(out["latency_ms"][0]) and out["latency_ms"][1] == 80.0
+
+
+# ---------- ⑤ 守卫与退化分支（复发猎杀 B/变异盲区 M5/M6） ----------
+
+def test_7_small_calibration_honest_degradation():
+    """k>n（n_cal=2, α=0.1 → k=3）：分位数 +inf → 全集（诚实退化，M5 盲区）。"""
+    from cp.conformal import predict_sets_split
+    scores_cal = np.array([0.2, 0.7])
+    probs_te = np.array([[0.5, 0.5], [0.9, 0.1], [0.05, 0.95]])
+    sets = predict_sets_split(scores_cal, probs_te, ALPHA)
+    assert all(sset == frozenset({0, 1}) for sset in sets)
+
+
+def test_8_guards_fail_loudly():
+    """权重/空校准守卫必须响亮失败（M6 盲区：上轮新增守卫零测试）。"""
+    import pytest
+    from cp.conformal import WeightedConformal, predict_sets_split
+    with pytest.raises(ValueError):  # 负权重
+        WeightedConformal(np.array([1.0, -1.0]), np.array([0.1, 0.2]), ALPHA)
+    with pytest.raises(ValueError):  # 非有限权重
+        WeightedConformal(np.array([1.0, np.nan]), np.array([0.1, 0.2]), ALPHA)
+    with pytest.raises(ValueError):  # 零权重和
+        WeightedConformal(np.zeros(3), np.array([0.1, 0.2, 0.3]), ALPHA)
+    with pytest.raises(ValueError):  # w_test 非有限（上轮缺口：NaN → 静默空集）
+        wc = WeightedConformal(np.ones(5), np.linspace(0.05, 0.5, 5), ALPHA)
+        wc.predict_sets(np.array([1.0, np.nan]), np.array([[0.5, 0.5], [0.4, 0.6]]))
+    with pytest.raises(ValueError):  # 空校准（静默全集通道已封）
+        predict_sets_split(np.array([]), np.array([[0.5, 0.5]]), ALPHA)

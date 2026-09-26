@@ -7,13 +7,15 @@ conformal，权重 w(x) = dP_target/dP_source 已知或可估）。
 
 实现注记：
 - split conformal 分位水平 k = ceil((n+1)(1−alpha))，k>n 时返回 +inf（预测全集，小校准诚实退化）
-- weighted conformal 逐候选标签条件（Tibshirani 2019 式(7) p 值规则的精确实现）：
-    含 y  ⟺  W_raw(s_y) + w_test > alpha·(T_raw + w_test)
-  其中 W_raw(·) 为校准分数在原始密度比权重下的 ≤ 累计质量、T_raw = Σw_cal、w_test = 该测试点
-  密度比（候选点自身质量 w_test 同时进入分子与分母，见论文式(7)）。该规则具备论文的
-  有限样本有效性；w 恒 1 且连续分数时精确退化为标准 split 条件。已知局限：覆盖率类
-  Monte-Carlo 断言对本规则与保守近似的 ~0.001 量级差异不敏感——正确性由
-  tests/test_cp_synthetic.py 的暴力 oracle 逐点对拍保证（见该测试）。
+- weighted conformal 逐候选标签条件（Tibshirani 2019 式(8) 的直接实现）：
+    含 y  ⟺  W_<(s_y) < (1−alpha)·(T_raw + w_test)
+  其中 W_<(·) 为校准分数中**严格小于** s_y 的原始权重质量（searchsorted side="left"）、
+  T_raw = Σw_cal、w_test = 该测试点密度比。论文式(8)：C(x) = {y: V_{n+1} ≤ Quantile(1−α;
+  Σp_i^w δ_{V_i} + p_{n+1}^w δ_∞)}——∞ 原子仅在 w_test/Σw_cal > α 时使分位数取 +∞
+  （全集）。实现经验证：w 恒 1 时与本项目 split 实现逐点一致（守卫测试
+  test_6_weighted_ones_equals_split 钉死该不变量；历史上此路径曾发生尾方向反转——
+  反转规则的边际覆盖率同为 1−α，覆盖率 MC 断言对其结构性免疫，逐点一致性测试是唯一防线）。
+  正确性由 test_4 的独立式(8) oracle（广义逆分位数构造，与实现无共享代数）逐点对拍保证。
 - 全部函数无 RNG、无拟合；分数由调用方给出（模型分数或解析后验）。
 """
 from __future__ import annotations
@@ -54,9 +56,9 @@ def predict_sets_split(scores_cal: np.ndarray, probs_test: np.ndarray,
 class WeightedConformal:
     """协变量偏移下已知密度比权重的 weighted conformal（Tibshirani et al. 2019）。
 
-    fit 阶段：记录校准分数与原始权重累计质量，构建加权 CDF。
-    含 y 条件（Tibshirani 式(7) 精确 p 值规则，见模块 docstring）：
-        W_raw(s_y) + w_test > alpha·(T_raw + w_test)
+    fit 阶段：记录校准分数与严格低于质量的累计权重，构建加权 CDF。
+    含 y 条件（Tibshirani 式(8) 直接实现，见模块 docstring）：
+        W_<(s_y) < (1−α)·(T_raw + w_test)
     """
 
     def __init__(self, w_cal: np.ndarray, scores_cal: np.ndarray, alpha: float):
@@ -74,9 +76,9 @@ class WeightedConformal:
         self._sorted_scores = scores_cal[order]
         self._cdf_weights = w_cal[order]  # 原始权重的 ≤ 累计质量
 
-    def _weighted_cdf_raw(self, s: np.ndarray) -> np.ndarray:
-        """W_raw(s)：原始权重下 ≤ s 的累计质量（测试点无关，一次构建全程复用）。"""
-        idx = np.searchsorted(self._sorted_scores, s, side="right")
+    def _weighted_cdf_below(self, s: np.ndarray) -> np.ndarray:
+        """W_<(s)：原始权重下**严格小于** s 的累计质量（测试点无关，一次构建全程复用）。"""
+        idx = np.searchsorted(self._sorted_scores, s, side="left")
         cdf = np.concatenate([[0.0], np.cumsum(self._cdf_weights)])
         return cdf[idx]
 
@@ -88,10 +90,10 @@ class WeightedConformal:
         s_all = 1.0 - np.asarray(probs_test, dtype=float)  # (n_test, 2) 每候选标签分数
         if np.any(~np.isfinite(s_all)):
             raise ValueError("probs_test 含非有限值")
-        W = self._weighted_cdf_raw(s_all.ravel()).reshape(s_all.shape)
-        # 式(7)：p 值 = (W_raw(s_y) + w_test) / (T_raw + w_test) > alpha
+        W_below = self._weighted_cdf_below(s_all.ravel()).reshape(s_all.shape)
+        thresholds = (1.0 - self.alpha) * (self._t_raw + w_test)  # (n_test,)
         sets = []
-        for row_w, wt in zip(W, w_test):
-            labels = {y for y, w_val in enumerate(row_w) if w_val + wt > self.alpha * (self._t_raw + wt)}
+        for row_w, thr in zip(W_below, thresholds):
+            labels = {y for y, w_val in enumerate(row_w) if w_val < thr}
             sets.append(frozenset(labels))
         return sets

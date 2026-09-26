@@ -41,7 +41,7 @@ run_spec:
     - "scaler 逐 seed 在 train 折内 fit（禁全池 fit）"
     - "val/test 一次性使用（无阈值/参数/早停选择）"
     - "仅读 dataset=='mit' 行，其他库零参与（含归一化统计）"
-    - "同 seed 重跑逐字节可复现"
+    - "同 seed 重跑数值可复现（≤4 位小数；run2 重放曾现 1 ulp 差异，不承诺逐字节）"
   output: results/baseline_mit.csv（per-seed 行 + gate 判定）
 
 change_log:
@@ -64,3 +64,11 @@ change_log:
            test 对选中配置只评一次；选择分布入报告；limitations 披露'修正由 gate 失败触发'；
            用户批准（选项 1，2026-09-26）"
     first_run_evidence: "commit 30dadcd（B3 退化）；第二轮运行记录（B3a = 0.7067 FAIL）"
+
+archival_policy:
+  id: POL-1
+  date: "2026-09-26"
+  rule: "轮次留档、不无痕覆盖（用户指令 2026-09-26）：正式结果文件每次运行必须同时落
+         results/<name>_run<N>_<决策标签>.csv 轮次档案并随轮次 commit；对已入库结果文件
+         的任何覆盖必须先 commit 前态。事故记录：TODO-3.2 第二轮（DEC-B3a 0.7067）曾被
+         无 commit 覆盖，已以确定性重生成补档（run2 与记录值逐位核验一致）。"
