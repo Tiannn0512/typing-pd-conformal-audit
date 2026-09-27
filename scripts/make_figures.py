@@ -55,8 +55,8 @@ def fig1_forest() -> None:
         ax.axhline(i, color="#dddddd", lw=0.5, zorder=0)
     ax.axvline(0.90, color="grey", ls="--", lw=0.8)
     ax.axvline(0.80, color="grey", ls=":", lw=0.8)
-    ax.text(0.902, -0.52, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
-    ax.text(0.802, -0.52, "audit 0.80", fontsize=6.5, color="grey", ha="left")
+    ax.text(0.904, -0.52, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
+    ax.text(0.806, -0.52, "audit 0.80", fontsize=6.5, color="grey", ha="left")
     ax.set_yticks(range(len(groups)))
     ax.set_yticklabels([DIR3[d] for d in groups])
     ax.invert_yaxis()
@@ -65,7 +65,8 @@ def fig1_forest() -> None:
     ax.set_xlim(0.3, 1.06)
     ax.scatter([], [], color=C["lr"], label="LR (primary reference)")
     ax.scatter([], [], color=C["lgbm"], label="LGBM (comparator, DEC-T1)")
-    ax.legend(loc="lower right", bbox_to_anchor=(1.0, 0.02), fontsize=7, frameon=False)
+    ax.legend(loc="lower right", bbox_to_anchor=(1.0, 0.02), fontsize=7,
+              frameon=True, framealpha=1.0, edgecolor="none", fancybox=False)
     fig.savefig(FIG / "fig1_primary_forest.png")
     plt.close(fig)
 
@@ -85,9 +86,11 @@ def fig2_class_conditional() -> None:
                         fmt=marker, color=color, capsize=2.5, ms=4.5, lw=1.1,
                         label=cls.upper())
             for x, l, n in zip(xs, lo, sub[f"n_cls_{cls}"]):
+                dy = -22 if l > 0.87 else -10  # 近 0.90 线的层加大下移,防穿线
                 ax.annotate(f"n={int(n)}", (x + (k - 0.5) * 0.3, l),
-                            xytext=(0, -10), textcoords="offset points",
-                            fontsize=6.2, ha="center", color=color)
+                            xytext=(0, dy), textcoords="offset points",
+                            fontsize=6.2, ha="center", color=color,
+                            bbox=dict(fc="white", ec="none", alpha=0.85, pad=0.6))
         ax.axhline(0.90, color="grey", ls="--", lw=0.8)
         ax.axhline(0.80, color="grey", ls=":", lw=0.8)
         ax.set_xticks(xs)
@@ -108,8 +111,8 @@ def fig3_decoupling() -> None:
     tm = pd.read_csv("results/transfer_matrix.csv")
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.4), sharex=True, sharey=True,
                              layout="constrained")
-    offs = {"tappy2mit": (-30, 5), "mit2tappy": (4, 4), "gold_merged2self": (4, -9),
-            "oe2mit": (-34, 3), "mit2typd": (4, 5), "mit2oe": (5, -9),
+    offs = {"gold_merged2self": (4, -9), "mit2typd": (7, -12),
+            "typd2mit": (7, -12), "oe2mit": (7, -12), "mit2oe": (5, -10),
             "oe2typd": (4, -9)}
     for ax, model in zip(axes, ("lr", "lgbm")):
         d_a = tm["auc_mean"] - AUC_REF[model]
@@ -142,25 +145,25 @@ def fig4_recovery_cost() -> None:
     for direction, color in colors.items():
         sub = rc[(rc["direction"] == direction) & (rc["method"] == "target_recalib")]
         nd = sub[~sub["qhat_inf"]].sort_values("n_target_labels")
-        ax.plot(nd["n_target_labels"], nd["coverage"], "o-", color=color, ms=4,
-                lw=1.1, label=DIR3[direction])
+        ax.plot(nd["n_target_labels"], nd["coverage"], "o-", color=color, ms=3.5,
+                lw=1.1, label=DIR3[direction], markeredgecolor="white",
+                markeredgewidth=1.0, zorder=3)
         deg = sub[sub["qhat_inf"]]
         if len(deg):
             ax.scatter(deg["n_target_labels"], deg["coverage"], facecolors="none",
                        edgecolors=color, s=38, ls="--", lw=1.0)
         w = rc[(rc["direction"] == direction) & (rc["method"] == "weighted_cp")].iloc[0]
-        ax.scatter(w["n_target_labels"], w["coverage"], marker="*", s=64, color=color,
+        ax.scatter(w["n_target_labels"], w["coverage"], marker="*", s=60, color=color,
                    edgecolors="black", linewidths=0.4, zorder=5)
     ax.axhline(0.80, color="grey", ls=":", lw=0.9)
     ax.axhline(0.90, color="grey", ls="--", lw=0.8)
-    ax.text(0.995, 0.905, "nominal 0.90", fontsize=6.5, color="grey",
-            transform=ax.get_yaxis_transform(), ha="right")
-    ax.text(0.995, 0.805, "audit 0.80 (pre-specified)", fontsize=6.5, color="grey",
-            transform=ax.get_yaxis_transform(), ha="right")
+    ax.text(28, 0.9035, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
+    ax.text(0.995, 0.7965, "audit 0.80 (pre-specified)", fontsize=6.5, color="grey",
+            transform=ax.get_yaxis_transform(), ha="right", va="top")
     ax.set_xlabel("Target-domain labeled subjects used for recalibration")
     ax.set_ylabel("Overall coverage on held-out\ntarget subjects")
     ax.set_ylim(0.78, 1.015)
-    ax.set_xlim(-4, 116)
+    ax.set_xlim(-4, 120)
     ax.legend(loc="upper right", fontsize=7, frameon=False)
     fig.savefig(FIG / "fig4_recovery_cost.png")
     plt.close(fig)
@@ -178,7 +181,8 @@ def fig5_dose_response() -> None:
         for arm, color in arm_color.items():
             sub = st[(st["arm"] == arm) & (st["scope"] == scope)].sort_values("dose_pct")
             ax.plot([0] + sub["dose_pct"].tolist(), [base] + sub["coverage"].tolist(),
-                    arm_style[arm], marker="o", color=color, ms=4, lw=1.1, label=arm)
+                    arm_style[arm], marker="o", color=color, ms=4, lw=1.1, label=arm,
+                    markeredgecolor="white", markeredgewidth=1.0)
         ax.axhline(0.90, color="grey", ls="--", lw=0.8)
         ax.set_title(title)
         ax.set_xlabel("Flip dose (% of donor class)")
