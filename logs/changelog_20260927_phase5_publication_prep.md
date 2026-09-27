@@ -84,3 +84,12 @@
 - guarantee/empirical 术语、治理措辞降级、OSF 标识进正文、3.2 单例构成改为冻结表推导（≥25/33）、50-seed 措辞、Fig6 非 CI 声明、贡献 (i) 范围澄清、伦理软化、ref13 旗标更新。
 - 终审 PASS_WITH_FIXES（单 minor：3.2 误引 Table 2，已删）。终版：摘要 247 词、正文 2,913 词、16:16 文献、图 1–6。
 - 公开仓库第三 commit e65676f（本次导出按检查清单剔除 04_关键文献，PDF 复查零命中）。
+
+## CHG-REV4 ｜ 第四轮审稿 14 点 → V4.0（2026-09-27，投稿前最后一轮清理；终审 PASS 0/0/0）
+
+- **P0 内部一致性（12 方向 vs Table 1 角色）**：核对 transfer_matrix.csv——恰好 12 个有序对（TyPD/OE 均既作源又作目标）→ 审稿人选项 A 成立：Table 1"仅合并源池/仅合并目标"是主家族角色描述而非全局限制。修法：Table 1 TyPD/OE 行改为"主家族：仅合并源池/目标；描述矩阵：源与目标"+表题注；Methods 2.4 增句"描述性审计矩阵覆盖全部 12 个有序数据集对；TyPD/OE 仅经合并方向进入确证家族"。
+- **术语**：比较性"两种分数函数"→"两种预测模型"（摘要/贡献ii/RQ2/3.3/局限3/结论）；LAC 分数定义本身不变（Methods "score: LAC" 保留）。
+- **其余**：k 句拆两句、退化分支事实化；结论"覆盖保证"→"经验覆盖"；acceptance-gate 再降级为 acceptance-framework 组件；manual-review 10–50% 改为冻结表精确推导 11–53%（双例=均集−1，2−均集=单例率恒等式核验，无空集）；3.1"confident miscoverage"改"并非主要来自无信息全集预测"；"mapping-reliability"→"deployment-reliability audit"；Code availability 解除 DOI 与录用绑定。
+- **CHG-P1 时间链核验（无需改稿）**：git 历史——修正提交 49c9ac7（09-26 15:32，含三轮 gate 证据链）早于覆盖审计提交 1441010（09-26 19:14）；稿内"amendment frozen before cross-dataset coverage was computed"与史实一致。
+- **终审**：academic-paper-reviewer 纪律复核 → **PASS（0 blocker/0 major/0 minor）**；摘要恰 250 词、正文 2,959 词、全部冻结数字复算一致。
+- 公开仓库同步至 commit da14e8e（PDF 检查零命中）。
