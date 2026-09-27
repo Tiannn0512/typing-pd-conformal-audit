@@ -54,10 +54,10 @@ Every primary direction fell statistically short of the nominal level under fami
 In Tappy→MIT, PD-conditional coverage was 0.214 [0.103, 0.368] (n = 42) while HC coverage was 1.000 (n = 40): 33 of 42 PD patients (78.6%) received sets excluding their true label — predominantly confident singletons exonerating them. The under-served class flipped with target prevalence: HC-conditional coverage was the deficient one in the two PD-heavy targets (0.700 in MIT→Tappy; 0.627 in clinical→self-report). The comparator score was near-uniform across classes (0.925–1.000). These are measured diagnostics on a frozen cohort, not guarantees; under joint covariate and label shift, class-conditional coverage may be unidentifiable without target labels.
 
 ### Decoupling: discrimination and coverage degrade on different axes
-Across all 12 transfer directions, discrimination and coverage moved asynchronously in both score functions (Fig. 2). The comparator's mean coverage exceeded the reference's in 11 of 12 directions despite lower AUC in all 12; reference-model directions with comparable discrimination showed coverage from 0.58 to 0.91. Per the pre-registered H1 plan this is a descriptive cross-direction characterization (no significance testing across 12 non-independent directions); the pattern is the paper's central object.
+Across all 12 transfer directions, discrimination and coverage moved asynchronously in both score functions (Fig. 3). The comparator's mean coverage exceeded the reference's in 11 of 12 directions despite lower AUC in all 12; reference-model directions with comparable discrimination showed coverage from 0.58 to 0.91. Per the pre-registered H1 plan this is a descriptive cross-direction characterization (no significance testing across 12 non-independent directions); the pattern is the paper's central object.
 
 ### Recovery: cheap where the score survives, expensive where it collapses
-Target recalibration with 9 labels restored the audit threshold with CI support in MIT→Tappy (0.982 [0.947, 0.999]); 18 labels sufficed for clinical→self-report (0.876 [0.837, 0.916]). Tappy→MIT was different: the point estimate crossed 0.80 at 16 labels, but the CI lower bound never reached 0.80 within a 30% budget (25 labels; 0.877 [0.763, 0.935]), and the PD-conditional residual persisted (0.759 vs HC 1.000) — pooled recalibration repairs the marginal quantile, not class-conditional miscalibration. Label-free density-ratio weighting attained nominal coverage (0.918–1.000) only by abstaining on 86–100% of subjects: coverage without utility. Fewer than 9 target labels yield degenerate full-set calibration sets at α = 0.10.
+Target recalibration with 9 labels restored the audit threshold with CI support in MIT→Tappy (0.982 [0.947, 0.996]); 18 labels sufficed for clinical→self-report (0.876 [0.837, 0.909]). Tappy→MIT was different: the point estimate crossed 0.80 at 16 labels, but the CI lower bound never reached 0.80 within a 30% budget (25 labels; 0.877 [0.763, 0.949]), and the PD-conditional residual persisted (0.759 vs HC 1.000) — pooled recalibration repairs the marginal quantile, not class-conditional miscalibration. Label-free density-ratio weighting attained nominal coverage (0.918–1.000) only by abstaining on 86–100% of subjects: coverage without utility. Fewer than 9 target labels yield degenerate full-set calibration sets at α = 0.10.
 
 ### Attribution: the observed phenotype is not manufactured by prevalence or noise alone
 Synthetic dose–response on the clinical source reproduced the form of class-conditional collapse (directional flips pinned one class at 1.000 while the other fell monotonically to 0.425), and the dispersive-noise dominance condition held at the process level in 9/9 theory-aligned cells. In the three-arm test, none of prevalence re-matching, prevalence-preserving corruption, or their combination reproduced the observed MIT→Tappy phenotype within the pre-specified tolerances — every arm missed both tolerances, two by overshooting into extreme asymmetry (HC coverage 0.025 and 0.000) absent from the real data. BBSE, validated as unbiased with nominal interval coverage on constructed label shift, degenerated on exactly the worst direction (Tappy→MIT, estimated PD prevalence 0.000), consistent with that direction's score-level collapse. The deployed coverage phenotype was not reproduced by prevalence re-matching or label corruption alone; the feature-space shift itself remains the uneliminated factor (no causal identification claimed) and is not a target that prevalence correction or label cleaning could address on their own.
@@ -89,10 +89,10 @@ Conclusions. Discrimination metrics and coverage guarantees fail independently u
 **Use of large language models.** AI agent assistance (ZCode CLI with GLM models) was used under human direction for pipeline execution, code generation, and internal consistency auditing; the author designed the study, verified all outputs, and is accountable for all content including citations. [Tool/version/date to be completed at submission.]
 
 ## References (Springer Basic; author to verify each entry before submission — zero-fabrication policy)
-1. Giancardo L, Cisco G, Sánchez-Ferro A, et al (2016) Computer-aided assessment of motor impairments using ubiquitous navigation systems. Sci Rep 6. https://doi.org/10.1038/srep28042
-2. Arroyo-Gallego T, Ledesma-Carbayo MJ, Sánchez-Ferro A, et al (2018) Detection of motor impairment in Parkinson's disease via mobile touchscreen typing. IEEE Trans Biomed Eng 64:1994–2001. https://doi.org/10.1109/TBME.2017.2664802 [author to verify]
+1. Giancardo L, Cisco G, Sánchez-Ferro A, et al (2016) Computer keyboard interaction as an indicator of early Parkinson's disease. Sci Rep 6:34468. https://doi.org/10.1038/srep34468
+2. Arroyo-Gallego T, Ledesma-Carbayo MJ, Sánchez-Ferro A, et al (2017) Detection of motor impairment in Parkinson's disease via mobile touchscreen typing. IEEE Trans Biomed Eng 64(9):1994–2002. https://doi.org/10.1109/TBME.2017.2664802 [author to verify]
 3. Tripathi A, et al (2023) [Keystroke-dynamics-based PD detection]. IEEE Trans Biomed Eng [author to complete]
-4. Francesconi F, et al (2025) Cross-dataset multivariate time-series model for Parkinson's disease screening. arXiv:2510.15950. https://arxiv.org/abs/2510.15950
+4. Francesconi F, et al (2025) Cross-dataset multivariate time-series model for Parkinson's Diagnosis via Keyboard Dynamics. arXiv:2510.15950. https://arxiv.org/abs/2510.15950
 5. Vovk V, Gammerman A, Shafer G (2005) Algorithmic learning in a random world. Springer, New York
 6. Angelopoulos AN, Bates S (2023) Conformal prediction: a gentle introduction. Found Trends Mach Learn 16:494–591. https://doi.org/10.1561/2200000101
 7. Tibshirani RJ, Foygel Barber R, Candès E, Ramdas A (2019) Conformal prediction under covariate shift. In: NeurIPS 32
@@ -102,7 +102,7 @@ Conclusions. Discrimination metrics and coverage guarantees fail independently u
 11. Diaz-Rincon A, et al (2025) Uncertainty-aware prediction of Parkinson's disease medication needs: a two-stage conformal prediction approach. PMLR 298. https://arxiv.org/abs/2508.10284
 12. [SGC-RML team] (2026) [Multimodal PD digital assessment with conformal calibration and selective refusal]. arXiv:2605.08302 [author to complete]
 13. Tuwani R, Beam E, et al (2023) [CP coverage audit in eICU]. [author to complete]
-14. Collins GS, Moons KGM, Dhiman P, et al (2024) TRIPOD+AI statement: updated reporting guidance for clinical prediction models that use regression or machine learning methods. BMJ 385:e078378. https://doi.org/10.1136/bmj-2023-078378
+14. Collins GS, Moons KGM, Dhiman P, et al (2024) TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. BMJ 385:e078378. https://doi.org/10.1136/bmj-2023-078378
 15. Luo H, et al (2025) MAPIE: a library for conformal prediction. [author to complete per JOSS record]
 
 > **Author to-do before submission (journal requirements):**
@@ -112,3 +112,28 @@ Conclusions. Discrimination metrics and coverage guarantees fail independently u
 > 4. Complete and upload the **TRIPOD+AI checklist** as supplementary information.
 > 5. Convert to Word (10-pt, double-spaced), figures embedded at ≥600 dpi (combination art), captions starting "Fig." in bold.
 > 6. Word count of main text (Introduction→Conclusions): ≈3,7xx — recheck ≤ 4,000 after revisions.
+
+
+---
+
+# Figures (embedded for internal review; final submission places them at first citation)
+
+**Fig. 1** Primary-family coverage on target cohorts (Clopper-Pearson 95% CI). Dashed line = nominal 0.90; dotted = pre-specified operational audit threshold 0.80. LR = primary reference; LGBM = comparator (DEC-T1).
+
+![Fig1](../figures/fig1_primary_forest.png)
+
+**Fig. 2** PD/HC class-conditional coverage (safety diagnostic, not a distribution-free guarantee). Left = LR; right = LGBM. Squares = PD; circles = HC; annotations give per-class n.
+
+![Fig2](../figures/fig2_class_conditional.png)
+
+**Fig. 3** Decoupling map: ΔAUC vs Δcoverage (50-seed means, 12 non-independent directions; descriptive, no correlation test). Left = LR; right = LGBM.
+
+![Fig3](../figures/fig3_decoupling.png)
+
+**Fig. 4** Recovery-cost curves. Open markers = degenerate full-set calibration (m<9); stars = weighted CP at 0 labels (rejection 0.86–1.00). Non-monotonic segments reflect single-draw sampling noise (pre-declared).
+
+![Fig4](../figures/fig4_recovery_cost.png)
+
+**Fig. 5** Stress-test A dose–response. Left = calibration-only flip (theory-aligned); right = train+calibration flip (deployment). Arms encoded by color and line style.
+
+![Fig5](../figures/fig5_dose_response.png)
