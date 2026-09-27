@@ -45,11 +45,14 @@ DIAGNOSTIC_CAVEAT = (
 
 
 def cp_ci(k: int, n: int, conf: float = 0.95) -> tuple[float, float]:
-    """Clopper-Pearson 精确二项 CI，含 K=0/K=n 边界守卫（与 coverage_audit 同式）。"""
+    """Clopper-Pearson 精确二项 CI，含 K=0/K=n 边界守卫（与 coverage_audit 同式）。
+
+    端点字面量 0.025/0.975 与 coverage_audit 逐字一致——(1-0.95)/2 的代数等价形式
+    会因浮点量化使 beta.ppf 末位差 1 ulp（审核定位：跨表 ci_lo 尾差根因）。"""
     if n == 0:
         return float("nan"), float("nan")
-    lo = float(_beta.ppf((1 - conf) / 2, k, n - k + 1)) if k > 0 else 0.0
-    hi = float(_beta.ppf(1 - (1 - conf) / 2, k + 1, n - k)) if k < n else 1.0
+    lo = float(_beta.ppf(0.025, k, n - k + 1)) if k > 0 else 0.0
+    hi = float(_beta.ppf(0.975, k + 1, n - k)) if k < n else 1.0
     return lo, hi
 
 

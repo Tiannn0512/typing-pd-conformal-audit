@@ -18,7 +18,7 @@
      tappy_users BirthYear）；**缺失不静默剔除**→ unknown 层（Tappy 28/173 无
      BirthYear）；age_median = 该方向目标内非缺失年龄的中位数分割（≤med / >med）。
   4. gold_merged2self 目标 366 = Tappy 173 + OE 193：性别/年龄层仅覆盖 Tappy 子
-     切片，covers 列显式（173/366=47.0%）；OE 193 无字段如实计数。
+     切片，covers 列显式（173/366=47.3%）；OE 193 无字段如实计数。
   5. 每层报 n/n_pd/k/coverage/CP 95% CI（K=0/K=n 守卫）/mean_size/singleton_rate；
      层间比较纯描述性——小层宽 CI 如实呈现。
   6. 无新随机性（全链确定性）。

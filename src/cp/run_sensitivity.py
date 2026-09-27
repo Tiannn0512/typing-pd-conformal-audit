@@ -33,6 +33,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -156,8 +157,11 @@ def main() -> None:
         m = run_fit(d["X_s"], d["y_s"], d["X_t"], d["y_t"], 0.20, SEED)
         rows.append({"variant": "alpha_020", "direction": name, **m})
 
-    # ---- 2. 50 seeds
+    # ---- 2. 50 seeds（运行时对登记口径断言，防漂移）
+    seeds_cfg = yaml.safe_load((Path(__file__).resolve().parents[2] / "configs" / "seeds.yaml")
+                               .read_text(encoding="utf-8"))
     seeds = list(range(1, 51))
+    assert seeds == list(seeds_cfg["split_seeds"]), "50-seed 清单与 seeds.yaml split_seeds 不符"
     for name, d in loaded.items():
         covs = [run_fit(d["X_s"], d["y_s"], d["X_t"], d["y_t"], ALPHA, s)["coverage"]
                 for s in seeds]
