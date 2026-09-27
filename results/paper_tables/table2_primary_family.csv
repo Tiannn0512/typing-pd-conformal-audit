@@ -1,0 +1,7 @@
+direction,model,tier,K/n,coverage (95% CI),Holm q,verdict,mean set size,singleton rate
+tappy2mit,lr,2,49/82,"0.598 [0.483, 0.704]",1.225171892270224e-12,Incompatible (family-controlled: coverage < 0.90 established),1.11,0.890
+tappy2mit,lgbm,2,79/82,"0.963 [0.897, 0.992]",NA (comparator),NA (comparator),1.95,0.049
+mit2tappy,lr,2,147/173,"0.850 [0.788, 0.899]",0.023452411119752162,Incompatible (family-controlled: coverage < 0.90 established),1.53,0.468
+mit2tappy,lgbm,2,171/173,"0.988 [0.959, 0.999]",NA (comparator),NA (comparator),1.97,0.029
+gold_merged2self,lr,1,268/366,"0.732 [0.684, 0.777]",2.481946996046472e-19,Incompatible (family-controlled: coverage < 0.90 established),1.30,0.699
+gold_merged2self,lgbm,1,354/366,"0.967 [0.943, 0.983]",NA (comparator),NA (comparator),1.92,0.077
