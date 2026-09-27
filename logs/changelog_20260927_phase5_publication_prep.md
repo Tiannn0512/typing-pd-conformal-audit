@@ -51,6 +51,22 @@
 - **结果**：16 条中 15 条完全查实零旗标；ref13 留预印本确认旗标（唯一文献侧作者待办）。
 - **首次出现顺序非严格递增**（14/15/16 先于 13/11/12）：Springer 校样阶段生产重排，不阻塞投稿，已记作者待办。
 
+## CHG-REV2 ｜ 用户 26 点审稿意见 → V2.0（2026-09-27，写论文+审论文 skill 双开）
+
+- 接受 22 点 / 部分反驳 4 点（详见台账 TODO-5.2c）。要点：LAC 改 "least-ambiguous classification (LAC) score s(x,y)=1−p̂(y|x)、单一合池分位、边际 1−α"+“类条件仅作诊断未用于校准”；因果语气统一降为 "uneliminated contributors (no causal identification claimed)"；auto-pass/false-reassurance 全部条件化（"if ... were operationalized"）；恢复叙述严格 "reached the pre-specified 0.80 operational audit threshold" 且预算注明队列观测值；z≈5.7 删除；Results 标题改描述性；RQ1–RQ3 进引言；LLM 披露 Methods/Declarations 分工去重；TRIPOD+AI 改 "where applicable"；新增局限 (8) 单一切分敏感。
+- **图形扩版（零新结果，全部只读冻结 CSV）**：新增 `fig5_weighted_cp_tradeoff.png`（覆盖–弃权双面板，calibration_comparison.csv）；`fig6_stress_tests.png` 三面板（剂量反应 A/B + 三臂条形 C，stress_test_a.csv + three_arm_stress_test.csv）；旧 fig5_dose_response 退役。新图目检零重叠。
+- **Fig 5/6 插入导致重编号**：weighted CP（§3.4 引 Fig 5）先于 stress tests（§3.5 引 Fig 6），保持图按正文引用顺序编号（JOMS 要求）。
+- **审稿人纠错确认**：Diaz-Rincon MLHC 2025 = PMLR 298（diaz-rincon25a）正式版存在，ref 11 已恢复并附官网链接；V1.0 轮删除该卷号系我方错误（OpenAlex 未索引≠不存在）。
+- 复审（academic-paper-reviewer 纪律）：**PASS_WITH_FIXES**，0 blocker / 0 major / 5 minor，5 minor 当轮全修；新增数字（0.918/0.861、三臂 0.700/0.025/0.975/0.000）与冻结 CSV 逐项核对一致。
+- 终版：摘要 246 词；正文 2,781/4,000；图 1–6 按序引用；16/16 文献被引。
+
+## CHG-PUB2 ｜ 公开仓库公证链补强（回应用户"上传方式"质询，2026-09-27）
+
+- **事实澄清**：V1.0 快照并非网页上传——是通过 GitHub API 建仓 + 从策展导出仓库 `git push` 的真实提交（377ff27，`git ls-remote` 可验证）；开发仓库无 remote 是设计使然（导出仓库承担推送）。
+- **质询的合理内核已补**：完整开发史与 v1.0-prereg / results-frozen-v1 两个 tag 此前确实不在公开仓库（防止 18 个第三方版权 PDF 随历史泄露的既定决策）。补强 = ①根目录新增 `PROVENANCE.md`：83 个 commit 的 全哈希|时间|主题 完整链 + 两个治理 tag 的开发哈希与时间公证表；②公开仓库新增两个附注镜像 tag（`v1.0-prereg-mirror` / `results-frozen-v1-mirror`），注释写明对应开发哈希与"内容子集"关系；③V2.0 作为第二个 commit 推上 main（首个 tag `public-timestamp-2026-09-27` 仍钉在 V1.0 种子提交）。
+- **未采纳项（含理由）**：`git push --force` 全量开发史——会把 04_关键文献 18 个版权 PDF 带入公开历史（质询文中"覆盖不损失任何东西"前提不成立），且 83 个 commit 的作者邮箱为 QQ 邮箱会全部公开；若需对象级全史，应先 filter-repo 剔 PDF+改邮箱后另推 history 分支（留作用户决策项，见台账）。
+- **Zenodo**：本机无 Zenodo 凭据，DOI 铸造需用户账号操作；已备 `zenodo_upload/`（快照 zip + 预填元数据），步骤见该目录 README。
+
 ## 台账维护
 
 - 清理 TODO-5.2 区块中编辑事故残留的重复模板段（原 990–999 行）。

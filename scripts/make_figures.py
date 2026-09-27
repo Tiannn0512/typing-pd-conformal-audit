@@ -169,41 +169,111 @@ def fig4_recovery_cost() -> None:
     plt.close(fig)
 
 
-def fig5_dose_response() -> None:
+def fig5_weighted_cp_tradeoff() -> None:
+    cc = pd.read_csv("results/calibration_comparison.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), layout="constrained")
+    dirs = ["tappy2mit", "mit2tappy", "gold_merged2self"]
+    labels = [DIR3[d] for d in dirs]
+    naive = [cc[(cc["direction"] == d) & (cc["method"] == "gold_direct")].iloc[0] for d in dirs]
+    wcp = [cc[(cc["direction"] == d) & (cc["method"] == "weighted_cp")].iloc[0] for d in dirs]
+    x = np.arange(len(dirs))
+    w = 0.36
+    for ax, key, ylab in ((axes[0], "coverage", "Coverage on held-out\ntarget subjects"),
+                          (axes[1], "rejection_rate", "Rejection (abstention) rate")):
+        ax.bar(x - w / 2, [m[key] for m in naive], w, color="#0072B2",
+               label="Naive split CP", edgecolor="white", lw=0.5)
+        ax.bar(x + w / 2, [m[key] for m in wcp], w, color="#D55E00",
+               label="Weighted CP (0 labels)", edgecolor="white", lw=0.5)
+        ax.set_xticks(x, labels, fontsize=7)
+        ax.set_ylim(0, 1.09)
+        ax.set_ylabel(ylab)
+        ax.set_xlabel("Transfer direction")
+    axes[0].axhline(0.90, color="grey", ls="--", lw=0.8)
+    axes[0].axhline(0.80, color="grey", ls=":", lw=0.9)
+    axes[0].set_ylim(0.45, 1.09)
+    for xi, m in zip(x - w / 2, naive):
+        axes[0].text(xi, m["coverage"] + 0.015, f'{m["coverage"]:.2f}', ha="center",
+                     fontsize=6, color="#0072B2")
+    for xi, m in zip(x + w / 2, wcp):
+        axes[1].text(xi, m["rejection_rate"] + 0.02, f'{m["rejection_rate"]:.2f}',
+                     ha="center", fontsize=6, color="#D55E00")
+    from matplotlib.lines import Line2D
+    handles, labels_ = axes[0].get_legend_handles_labels()
+    handles += [Line2D([0], [0], color="grey", ls="--", lw=0.8),
+                Line2D([0], [0], color="grey", ls=":", lw=0.9)]
+    labels_ += ["nominal 0.90", "audit 0.80 (pre-specified)"]
+    fig.legend(handles, labels_, loc="outside upper center", ncols=4, fontsize=6.5,
+               frameon=False)
+    fig.savefig(FIG / "fig5_weighted_cp_tradeoff.png")
+    plt.close(fig)
+
+
+def fig6_stress_tests() -> None:
     st = pd.read_csv("results/stress_test_a.csv")
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0), sharey=True,
-                             layout="constrained")
+    ta = pd.read_csv("results/three_arm_stress_test.csv")
+    fig = plt.figure(figsize=(7.2, 5.6), layout="constrained")
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 1.0])
+    ax_a = fig.add_subplot(gs[0, 0])
+    ax_b = fig.add_subplot(gs[0, 1], sharey=ax_a)
+    ax_c = fig.add_subplot(gs[1, :])
     arm_color = {"PD2HC": "#0072B2", "HC2PD": "#D55E00", "symmetric": "#009E73"}
     arm_style = {"PD2HC": "-", "HC2PD": "--", "symmetric": "-."}
     base = st[(st["arm"] == "none")]["coverage"].iloc[0]
-    for ax, scope, title in ((axes[0], "cal_only", "Calibration-only flip (theory-aligned)"),
-                             (axes[1], "train_cal", "Train+calibration flip (deployment)")):
+    for ax, scope, title in ((ax_a, "cal_only", "A  Calibration-only flip (theory-aligned)"),
+                             (ax_b, "train_cal", "B  Train+calibration flip (deployment)")):
         for arm, color in arm_color.items():
             sub = st[(st["arm"] == arm) & (st["scope"] == scope)].sort_values("dose_pct")
             ax.plot([0] + sub["dose_pct"].tolist(), [base] + sub["coverage"].tolist(),
                     arm_style[arm], marker="o", color=color, ms=4, lw=1.1, label=arm,
                     markeredgecolor="white", markeredgewidth=1.0)
         ax.axhline(0.90, color="grey", ls="--", lw=0.8)
-        ax.set_title(title)
+        ax.set_title(title, fontsize=8, loc="left")
         ax.set_xlabel("Flip dose (% of donor class)")
         ax.set_ylim(0.79, 1.01)
         ax.set_xticks([0, 10, 20, 30])
-    axes[0].set_ylabel("Overall coverage on Tappy target")
-    axes[0].annotate("nominal 0.90", (28, 0.904), fontsize=6.5, color="grey", ha="right")
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="outside lower center", ncols=3, fontsize=7,
-               frameon=False)
-    fig.savefig(FIG / "fig5_dose_response.png")
+    ax_a.set_ylabel("Overall coverage on Tappy target")
+    ax_a.annotate("nominal 0.90", (28, 0.904), fontsize=6.5, color="grey", ha="right")
+    handles, labels = ax_a.get_legend_handles_labels()
+    ax_a.legend(handles, labels, loc="lower left", fontsize=6.5, frameon=True,
+                framealpha=1.0, edgecolor="none")
+
+    groups = [("Observed\n(MIT→Tappy)", ta[ta["arm"] == "baseline"].iloc[0]),
+              ("Prevalence\nre-matching", ta[(ta["arm"] == "resample_only")].iloc[0]),
+              ("Prevalence-preserving\nflips", ta[(ta["arm"] == "flip_only") &
+                                                  (ta["scope"] == "train_cal")].iloc[0]),
+              ("Combination", ta[(ta["arm"] == "both") &
+                                 (ta["scope"] == "train_cal")].iloc[0])]
+    x = np.arange(len(groups))
+    w = 0.36
+    obs_pd = groups[0][1]["cpc_pd"]
+    obs_hc = groups[0][1]["cpc_hc"]
+    ax_c.axhspan(obs_pd - 0.05, obs_pd + 0.05, color="#0072B2", alpha=0.10, zorder=0)
+    ax_c.axhspan(obs_hc - 0.05, obs_hc + 0.05, color="#D55E00", alpha=0.10, zorder=0)
+    ax_c.bar(x - w / 2, [g[1]["cpc_pd"] for g in groups], w, color="#0072B2",
+             label="PD-conditional", edgecolor="white", lw=0.5, zorder=2)
+    ax_c.bar(x + w / 2, [g[1]["cpc_hc"] for g in groups], w, color="#D55E00",
+             label="HC-conditional", edgecolor="white", lw=0.5, zorder=2)
+    for xi, g in zip(x + w / 2, groups):
+        ax_c.text(xi, g[1]["cpc_hc"] + 0.02, f'{g[1]["cpc_hc"]:.3f}',
+                  ha="center", fontsize=6, color="#D55E00")
+    ax_c.set_xticks(x, [g[0] for g in groups], fontsize=7)
+    ax_c.set_ylim(0, 1.09)
+    ax_c.set_ylabel("Class-conditional coverage")
+    ax_c.set_xlabel("C  Three-arm real-transfer test (shaded band = ±5 pp practical-equivalence "
+                    "tolerance around observed)", fontsize=8, loc="left")
+    ax_c.legend(loc="upper left", fontsize=6.5, ncols=2, frameon=True, framealpha=1.0,
+                edgecolor="none")
+    fig.savefig(FIG / "fig6_stress_tests.png")
     plt.close(fig)
 
 
 def main() -> None:
     FIG.mkdir(exist_ok=True)
     for f in (fig1_forest, fig2_class_conditional, fig3_decoupling,
-              fig4_recovery_cost, fig5_dose_response):
+              fig4_recovery_cost, fig5_weighted_cp_tradeoff, fig6_stress_tests):
         f()
         print(f"[ok] {f.__name__}")
-    print("→ figures/fig1..fig5.png (600 DPI, 183 mm double-column width)")
+    print("→ figures/fig1..fig6.png (600 DPI, 183 mm double-column width)")
 
 
 if __name__ == "__main__":

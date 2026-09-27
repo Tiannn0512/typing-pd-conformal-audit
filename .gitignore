@@ -21,3 +21,11 @@ __pycache__/
 
 # OSF 上传包（临时汇集目录，内容已各自入库，不重复入库）
 osf_upload/
+
+# Zenodo 上传准备包（临时汇集，发布 DOI 后留记录于 logs/）
+zenodo_upload/
+
+# 另一窗口的理解用初稿与工具文件（用户明示不入库）
+reports/manuscript_front_draft_v0.1*
+reports/paper_skeleton_guide_v0.1*
+.zcodeignore
