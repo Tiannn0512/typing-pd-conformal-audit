@@ -93,3 +93,12 @@
 - **CHG-P1 时间链核验（无需改稿）**：git 历史——修正提交 49c9ac7（09-26 15:32，含三轮 gate 证据链）早于覆盖审计提交 1441010（09-26 19:14）；稿内"amendment frozen before cross-dataset coverage was computed"与史实一致。
 - **终审**：academic-paper-reviewer 纪律复核 → **PASS（0 blocker/0 major/0 minor）**；摘要恰 250 词、正文 2,959 词、全部冻结数字复算一致。
 - 公开仓库同步至 commit da14e8e（PDF 检查零命中）。
+
+## CHG-STRUCT1 ｜ V5.0：按正式见刊 JMS 文章重构版式（2026-09-27，用户提供 Liu et al. J Med Syst 50:136 (2026) 样例）
+
+- 模板：Development of a Framework for Evaluating LLM Safety and Reliability（doi 10.1007/s10916-026-02459-1）。**内容与已过审 V4.0 逐字一致，仅结构编辑**。
+- 去节号（该刊正文标题不编号）；Methods 子标题 Title-Case 并按模板新增 **Use of AI-Assisted Tools**（LLM 披露并入 Methods，声明区单列项删除——模板即此做法，且减少重复）与 **Reporting Standards**（TRIPOD+AI 移入）；Results 子标题 Title-Case；讨论首段无标题 + 粗体段标题（Coverage Auditing as Deployment Governance / Relation to Prior Work）；Conclusions→Conclusion（单数）。
+- 背事项顺序照模板：Supplementary Information 说明 → Author Contributions → Funding → Data Availability → Code Availability → Declarations（Ethics / Consent×2 / Clinical Trial Number 不适用 / Competing Interests）。
+- 关键词分隔符改 "·"；新增统计环境句（Python 3.12.10；pandas 3.0.6 / NumPy 2.5.3 / SciPy 1.18.1 / scikit-learn 1.9.1 / LightGBM 4.7.0 / MAPIE 1.5.0，venv 实测）。
+- 程序化核验：模板标题清单逐项命中、无编号标题残留、冻结数字与审稿措辞零漂移、16:16 文献、图 1–6 按序、摘要 250 词。本轮为纯结构编辑（内容已四轮审稿+终审 PASS），故以脚本核验替代 agent 复审。
+- 本地 5a2b1b7；公开仓库同步（PDF 检查零命中）。
