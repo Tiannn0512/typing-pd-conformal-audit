@@ -136,3 +136,9 @@
 - 依据查证：CNS 图的实际 matplotlib 标准即 **SciencePlots science 色环**（#0C5DA5 蓝 / #00B945 绿 / #FF9500 橙 / #FF2C00 红 / #845B97 紫 / #474747 灰；官方注明 colorblind friendly）+ **Paul Tol muted**（#4477AA / #EE6677），Nature/Cell 系图广泛使用。
 - 分图：fig1 science 蓝/红；fig2 Tol 玫瑰/蓝（PD/HC）；fig3 science 紫/橙（LR/LGBM）；fig4 science 蓝/绿/橙（三方向）；fig5 灰/绿（朴素/加权）；fig6 science 蓝/红/紫（PD/HC/symmetric，含容差带同色）。
 - 六图重生成逐张目检；媒体替换更新两个 V5.1 docx（文字零改动）。本地 e8fb42c；公开仓库同步。
+
+## CHG-FIG11 ｜ 六图换用用户提供的和谐软色系（2026-09-27，用户提供三套示例色板）
+
+- 主基色 = 用户套一（生物机制图百搭色）：#385A9E 强蓝 / #FAD9C7 蜜桃 / #A4B6D6 长春花蓝 / #CBB9B3 灰褐 / #9FC1D1 柔蓝 / #E8D1D3 灰粉；对比色取自套二：琥珀 #EFA94A、绿 #279E7D、玫瑰 #D48CA6；套三高亮色按其自带提醒（区分度）不采用。
+- 语义锚定：强蓝 = LR 主参照 / PD 条件；琥珀 = LGBM 对照（fig1/3）；玫瑰 = HC 条件（fig2/6）；fig4 三方向 = 蓝/绿/琥珀；fig5 = 长春花蓝(朴素) vs 强蓝(加权)。
+- 六图重生成逐张目检（fig1/2/5/6 全图 + fig3/4 同锚定）；媒体替换更新两个 V5.1 docx（文字零改动）。本地 2673575；公开仓库同步（一次成功）。
