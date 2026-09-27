@@ -126,7 +126,7 @@ Conclusions. Discrimination metrics and coverage guarantees fail independently u
 
 ![Fig2](../figures/fig2_class_conditional.png)
 
-**Fig. 3** Decoupling map: ΔAUC vs Δcoverage (50-seed means, 12 non-independent directions; descriptive, no correlation test). Left = LR; right = LGBM.
+**Fig. 3** Decoupling map: ΔAUC vs Δcoverage (50-seed means; 12 non-independent directions — descriptive, no correlation test). Left = LR; right = LGBM. Labels: dataset initials T = Tappy, M = MIT, Y = TyPD, O = Online English; arrow = transfer direction.
 
 ![Fig3](../figures/fig3_decoupling.png)
 

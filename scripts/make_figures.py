@@ -55,8 +55,8 @@ def fig1_forest() -> None:
         ax.axhline(i, color="#dddddd", lw=0.5, zorder=0)
     ax.axvline(0.90, color="grey", ls="--", lw=0.8)
     ax.axvline(0.80, color="grey", ls=":", lw=0.8)
-    ax.text(0.902, 2.62, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
-    ax.text(0.802, 2.62, "audit 0.80", fontsize=6.5, color="grey", ha="left")
+    ax.text(0.902, -0.52, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
+    ax.text(0.802, -0.52, "audit 0.80", fontsize=6.5, color="grey", ha="left")
     ax.set_yticks(range(len(groups)))
     ax.set_yticklabels([DIR3[d] for d in groups])
     ax.invert_yaxis()
@@ -95,7 +95,9 @@ def fig2_class_conditional() -> None:
         ax.set_title({"lr": "LR (primary reference)",
                       "lgbm": "LGBM (comparator)"}[model])
         ax.set_ylim(0, 1.04)
-        ax.tick_params(axis="y", which="minor", left=model == "lr")
+        ax.tick_params(axis="y", which="minor", left=False)
+        if model != "lr":
+            ax.tick_params(axis="y", which="major", left=False)
     axes[0].set_ylabel("Class-conditional coverage")
     axes[1].legend(loc="lower right", fontsize=7, frameon=False)
     fig.savefig(FIG / "fig2_class_conditional.png")
@@ -107,7 +109,8 @@ def fig3_decoupling() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.4), sharex=True, sharey=True,
                              layout="constrained")
     offs = {"tappy2mit": (-30, 5), "mit2tappy": (4, 4), "gold_merged2self": (4, -9),
-            "oe2mit": (-24, -3), "mit2typd": (4, 5)}
+            "oe2mit": (-34, 3), "mit2typd": (4, 5), "mit2oe": (5, -9),
+            "oe2typd": (4, -9)}
     for ax, model in zip(axes, ("lr", "lgbm")):
         d_a = tm["auc_mean"] - AUC_REF[model]
         d_c = tm["coverage_mean"] - 0.90
@@ -119,19 +122,15 @@ def fig3_decoupling() -> None:
             ha = "right" if dx < 0 else "left"
             ax.annotate(SHORT.get(name, name), (da, dc), xytext=(dx, dy),
                         textcoords="offset points", fontsize=6, ha=ha)
-        ax.annotate("coverage held", (0.04, 0.03), xycoords="axes fraction",
-                    fontsize=6.2, color="dimgrey")
-        ax.annotate("coverage degraded", (0.04, 0.10), xycoords="axes fraction",
-                    fontsize=6.2, color="dimgrey")
+        ax.annotate("coverage held", (0.97, 0.045), xycoords="axes fraction",
+                    fontsize=6.2, color="dimgrey", ha="right")
+        ax.annotate("coverage degraded", (0.97, 0.115), xycoords="axes fraction",
+                    fontsize=6.2, color="dimgrey", ha="right")
         ax.set_title({"lr": "LR (primary reference)",
                       "lgbm": "LGBM (comparator)"}[model])
         ax.set_xlabel("ΔAUC vs in-domain reference")
         ax.set_xlim(-0.29, 0.13)
     axes[0].set_ylabel("ΔCoverage vs nominal 0.90\n(50-seed mean)")
-    axes[0].annotate("T→M = Tappy→MIT, M→T = MIT→Tappy, etc. (dataset initials);\n"
-                     "12 non-independent directions — descriptive, no correlation test",
-                     xy=(0.0, -0.32), xycoords="axes fraction", fontsize=6,
-                     color="dimgrey")
     fig.savefig(FIG / "fig3_decoupling.png")
     plt.close(fig)
 
@@ -154,19 +153,15 @@ def fig4_recovery_cost() -> None:
                    edgecolors="black", linewidths=0.4, zorder=5)
     ax.axhline(0.80, color="grey", ls=":", lw=0.9)
     ax.axhline(0.90, color="grey", ls="--", lw=0.8)
-    ax.text(0.9, 0.905, "nominal 0.90", fontsize=6.5, color="grey",
-            transform=ax.get_yaxis_transform())
-    ax.text(0.9, 0.805, "audit 0.80 (pre-specified)", fontsize=6.5, color="grey",
-            transform=ax.get_yaxis_transform())
+    ax.text(0.995, 0.905, "nominal 0.90", fontsize=6.5, color="grey",
+            transform=ax.get_yaxis_transform(), ha="right")
+    ax.text(0.995, 0.805, "audit 0.80 (pre-specified)", fontsize=6.5, color="grey",
+            transform=ax.get_yaxis_transform(), ha="right")
     ax.set_xlabel("Target-domain labeled subjects used for recalibration")
     ax.set_ylabel("Overall coverage on held-out\ntarget subjects")
     ax.set_ylim(0.78, 1.015)
     ax.set_xlim(-4, 116)
-    ax.legend(loc="lower right", fontsize=7, frameon=False)
-    ax.annotate("open marker = degenerate full-set calibration (m<9); star = weighted CP "
-                "at 0 labels (rejection 0.86–1.00):\ncoverage without utility. Non-monotonic "
-                "segments reflect single-draw sampling noise (pre-declared).",
-                xy=(0.005, 0.012), xycoords="axes fraction", fontsize=6, color="dimgrey")
+    ax.legend(loc="upper right", fontsize=7, frameon=False)
     fig.savefig(FIG / "fig4_recovery_cost.png")
     plt.close(fig)
 

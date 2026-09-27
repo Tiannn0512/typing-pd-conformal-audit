@@ -120,7 +120,7 @@ MIT→Tappy 用 9 个标注即恢复审计阈值且 CI 支持充分（0.982 [0.9
 
 ![图2b](../figures/transfer_heatmap.png)
 
-**图 3. 解耦主图:ΔAUC vs Δ覆盖(50-seed 均值,12 非独立方向,描述性,不做相关性检验)。** 左=LR,右=LGBM。
+**图 3. 解耦主图:ΔAUC vs Δ覆盖(50-seed 均值;12 非独立方向——描述性,不做相关性检验)。** 左=LR,右=LGBM。标签:T=Tappy,M=MIT,Y=TyPD,O=Online English;箭头=迁移方向。
 
 ![图3](../figures/fig3_decoupling.png)
 
