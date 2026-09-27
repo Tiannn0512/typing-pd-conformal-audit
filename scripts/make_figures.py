@@ -22,7 +22,9 @@ import pandas as pd
 
 FIG = Path("figures")
 AUC_REF = {"lr": 0.7868, "lgbm": 0.7257}  # CHG-P1 冻结库内参照
-C = {"lr": "#0072B2", "lgbm": "#D55E00"}
+C = {"lr": "#3C5488", "lgbm": "#E64B35"}  # NPG deep blue / NPG red
+PAL = {"red": "#E64B35", "lblue": "#4DBBD5", "teal": "#00A087",
+       "nblue": "#3C5488", "salmon": "#F39B7F", "purple": "#8491B4"}
 DIR3 = {"tappy2mit": "Tappy→MIT", "mit2tappy": "MIT→Tappy",
         "gold_merged2self": "Clinical→Self-report"}
 SHORT = {"tappy2mit": "T→M", "mit2tappy": "M→T", "tappy2oe": "T→O", "oe2tappy": "O→T",
@@ -32,6 +34,7 @@ SHORT = {"tappy2mit": "T→M", "mit2tappy": "M→T", "tappy2oe": "T→O", "oe2ta
 plt.rcParams.update({
     "font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8,
     "xtick.labelsize": 7.5, "ytick.labelsize": 7.5, "legend.fontsize": 7,
+    "font.family": "sans-serif", "font.sans-serif": ["Arial", "DejaVu Sans"],
     "axes.spines.top": False, "axes.spines.right": False,
     "figure.dpi": 600, "savefig.dpi": 600, "axes.linewidth": 0.7,
 })
@@ -55,8 +58,12 @@ def fig1_forest() -> None:
         ax.axhline(i, color="#dddddd", lw=0.5, zorder=0)
     ax.axvline(0.90, color="grey", ls="--", lw=0.8)
     ax.axvline(0.80, color="grey", ls=":", lw=0.8)
-    ax.text(0.904, -0.52, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
-    ax.text(0.806, -0.52, "audit 0.80", fontsize=6.5, color="grey", ha="left")
+    ax.annotate("nominal 0.90", (0.90, 1.0), xycoords=("data", "axes fraction"),
+                xytext=(2, 3), textcoords="offset points", fontsize=6.5, color="grey",
+                ha="left")
+    ax.annotate("audit 0.80 (pre-specified)", (0.80, 1.0), xycoords=("data", "axes fraction"),
+                xytext=(-2, 3), textcoords="offset points", fontsize=6.5, color="grey",
+                ha="right")
     ax.set_yticks(range(len(groups)))
     ax.set_yticklabels([DIR3[d] for d in groups])
     ax.invert_yaxis()
@@ -64,9 +71,9 @@ def fig1_forest() -> None:
     ax.set_xlabel("Coverage on target cohort (Clopper-Pearson 95% CI)")
     ax.set_xlim(0.3, 1.06)
     ax.scatter([], [], color=C["lr"], label="LR (primary reference)")
-    ax.scatter([], [], color=C["lgbm"], label="LGBM (comparator, DEC-T1)")
+    ax.scatter([], [], color=C["lgbm"], label="LGBM (comparator)")
     ax.legend(loc="lower right", bbox_to_anchor=(1.0, 0.02), fontsize=7,
-              frameon=True, framealpha=1.0, edgecolor="none", fancybox=False)
+              frameon=False)
     fig.savefig(FIG / "fig1_primary_forest.png")
     plt.close(fig)
 
@@ -78,8 +85,8 @@ def fig2_class_conditional() -> None:
     for ax, model in zip(axes, ("lr", "lgbm")):
         sub = cc[cc["model"] == model]
         xs = np.arange(len(sub))
-        for k, (cls, color, marker) in enumerate((("pd", "#0072B2", "s"),
-                                                  ("hc", "#E69F00", "o"))):
+        for k, (cls, color, marker) in enumerate((("pd", "#E64B35", "s"),
+                                                  ("hc", "#3C5488", "o"))):
             cov = sub[f"coverage_cls_{cls}"]
             lo, hi = sub[f"ci_lo_cls_{cls}"], sub[f"ci_hi_cls_{cls}"]
             ax.errorbar(xs + (k - 0.5) * 0.3, cov, yerr=[cov - lo, hi - cov],
@@ -125,10 +132,6 @@ def fig3_decoupling() -> None:
             ha = "right" if dx < 0 else "left"
             ax.annotate(SHORT.get(name, name), (da, dc), xytext=(dx, dy),
                         textcoords="offset points", fontsize=6, ha=ha)
-        ax.annotate("coverage held", (0.97, 0.045), xycoords="axes fraction",
-                    fontsize=6.2, color="dimgrey", ha="right")
-        ax.annotate("coverage degraded", (0.97, 0.115), xycoords="axes fraction",
-                    fontsize=6.2, color="dimgrey", ha="right")
         ax.set_title({"lr": "LR (primary reference)",
                       "lgbm": "LGBM (comparator)"}[model])
         ax.set_xlabel("ΔAUC vs in-domain reference")
@@ -141,7 +144,7 @@ def fig3_decoupling() -> None:
 def fig4_recovery_cost() -> None:
     rc = pd.read_csv("results/recovery_cost_table.csv")
     fig, ax = plt.subplots(figsize=(7.2, 3.6), layout="constrained")
-    colors = {"tappy2mit": "#0072B2", "mit2tappy": "#D55E00", "gold_merged2self": "#009E73"}
+    colors = {"tappy2mit": "#E64B35", "mit2tappy": "#3C5488", "gold_merged2self": "#00A087"}
     for direction, color in colors.items():
         sub = rc[(rc["direction"] == direction) & (rc["method"] == "target_recalib")]
         nd = sub[~sub["qhat_inf"]].sort_values("n_target_labels")
@@ -157,7 +160,7 @@ def fig4_recovery_cost() -> None:
                    edgecolors="black", linewidths=0.4, zorder=5)
     ax.axhline(0.80, color="grey", ls=":", lw=0.9)
     ax.axhline(0.90, color="grey", ls="--", lw=0.8)
-    ax.text(28, 0.9035, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
+    ax.text(-2.5, 0.9065, "nominal 0.90", fontsize=6.5, color="grey", ha="left")
     ax.text(0.995, 0.7965, "audit 0.80 (pre-specified)", fontsize=6.5, color="grey",
             transform=ax.get_yaxis_transform(), ha="right", va="top")
     ax.set_xlabel("Target-domain labeled subjects used for recalibration")
@@ -180,9 +183,9 @@ def fig5_weighted_cp_tradeoff() -> None:
     w = 0.36
     for ax, key, ylab in ((axes[0], "coverage", "Coverage on held-out\ntarget subjects"),
                           (axes[1], "rejection_rate", "Rejection (abstention) rate")):
-        ax.bar(x - w / 2, [m[key] for m in naive], w, color="#0072B2",
+        ax.bar(x - w / 2, [m[key] for m in naive], w, color="#3C5488",
                label="Naive split CP", edgecolor="white", lw=0.5)
-        ax.bar(x + w / 2, [m[key] for m in wcp], w, color="#D55E00",
+        ax.bar(x + w / 2, [m[key] for m in wcp], w, color="#E64B35",
                label="Weighted CP (0 labels)", edgecolor="white", lw=0.5)
         ax.set_xticks(x, labels, fontsize=7)
         ax.set_ylim(0, 1.09)
@@ -193,10 +196,10 @@ def fig5_weighted_cp_tradeoff() -> None:
     axes[0].set_ylim(0.45, 1.09)
     for xi, m in zip(x - w / 2, naive):
         axes[0].text(xi, m["coverage"] + 0.015, f'{m["coverage"]:.2f}', ha="center",
-                     fontsize=6, color="#0072B2")
+                     fontsize=6, color="#3C5488")
     for xi, m in zip(x + w / 2, wcp):
         axes[1].text(xi, m["rejection_rate"] + 0.02, f'{m["rejection_rate"]:.2f}',
-                     ha="center", fontsize=6, color="#D55E00")
+                     ha="center", fontsize=6, color="#E64B35")
     from matplotlib.lines import Line2D
     handles, labels_ = axes[0].get_legend_handles_labels()
     handles += [Line2D([0], [0], color="grey", ls="--", lw=0.8),
@@ -216,7 +219,7 @@ def fig6_stress_tests() -> None:
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1], sharey=ax_a)
     ax_c = fig.add_subplot(gs[1, :])
-    arm_color = {"PD2HC": "#0072B2", "HC2PD": "#D55E00", "symmetric": "#009E73"}
+    arm_color = {"PD2HC": "#3C5488", "HC2PD": "#E64B35", "symmetric": "#00A087"}
     arm_style = {"PD2HC": "-", "HC2PD": "--", "symmetric": "-."}
     base = st[(st["arm"] == "none")]["coverage"].iloc[0]
     for ax, scope, title in ((ax_a, "cal_only", "A  Calibration-only flip (theory-aligned)"),
@@ -247,15 +250,15 @@ def fig6_stress_tests() -> None:
     w = 0.36
     obs_pd = groups[0][1]["cpc_pd"]
     obs_hc = groups[0][1]["cpc_hc"]
-    ax_c.axhspan(obs_pd - 0.05, obs_pd + 0.05, color="#0072B2", alpha=0.10, zorder=0)
-    ax_c.axhspan(obs_hc - 0.05, obs_hc + 0.05, color="#D55E00", alpha=0.10, zorder=0)
-    ax_c.bar(x - w / 2, [g[1]["cpc_pd"] for g in groups], w, color="#0072B2",
+    ax_c.axhspan(obs_pd - 0.05, obs_pd + 0.05, color="#3C5488", alpha=0.10, zorder=0)
+    ax_c.axhspan(obs_hc - 0.05, obs_hc + 0.05, color="#E64B35", alpha=0.10, zorder=0)
+    ax_c.bar(x - w / 2, [g[1]["cpc_pd"] for g in groups], w, color="#3C5488",
              label="PD-conditional", edgecolor="white", lw=0.5, zorder=2)
-    ax_c.bar(x + w / 2, [g[1]["cpc_hc"] for g in groups], w, color="#D55E00",
+    ax_c.bar(x + w / 2, [g[1]["cpc_hc"] for g in groups], w, color="#E64B35",
              label="HC-conditional", edgecolor="white", lw=0.5, zorder=2)
     for xi, g in zip(x + w / 2, groups):
         ax_c.text(xi, g[1]["cpc_hc"] + 0.02, f'{g[1]["cpc_hc"]:.3f}',
-                  ha="center", fontsize=6, color="#D55E00")
+                  ha="center", fontsize=6, color="#E64B35")
     ax_c.set_xticks(x, [g[0] for g in groups], fontsize=7)
     ax_c.set_ylim(0, 1.09)
     ax_c.set_ylabel("Class-conditional coverage")
