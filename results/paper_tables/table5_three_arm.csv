@@ -1,0 +1,7 @@
+arm,scope,source pool,flips,coverage (delta),mean size (delta),PD,HC,reproduced
+baseline,none,42PD/40HC (pi=0.512),0/0,0.850 (+0.000),1.53 (+0.00),0.895,0.700,yes
+resample_only,pool_level,42PD/15HC (pi=0.737),0/0,0.775 (-0.075),1.01 (-0.52),1.000,0.025,no
+flip_only,cal_only,42PD/40HC (pi=0.512),9/9,0.988 (+0.139),1.90 (+0.37),1.000,0.950,no
+flip_only,train_cal,42PD/40HC (pi=0.512),9/9,0.994 (+0.145),1.94 (+0.41),1.000,0.975,no
+both,cal_only,42PD/15HC (pi=0.737),6/6,0.983 (+0.133),1.87 (+0.34),1.000,0.925,no
+both,train_cal,42PD/15HC (pi=0.737),6/6,0.769 (-0.081),1.00 (-0.53),1.000,0.000,no

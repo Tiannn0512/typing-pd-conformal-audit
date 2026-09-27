@@ -1,0 +1,23 @@
+# 受保护数据绝不入库（本课题数据虽公开，下载物仍不入库，只留清单与SHA256）
+data/**
+!data/raw
+!data/raw/DATA_MANIFEST.md
+*.csv
+*.parquet
+*.zip
+*.h5ad
+results/**/*.parquet
+
+# 临时产物
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+
+# 小体量正式结果表入库（冻结队列表/主结论表/功效表，TODO-2.1/3.2/3.3/4.2/4.4）
+!results/*.csv
+# 论文定稿表（TODO-5.1，程序化派生自冻结 results，正式交付物）
+!results/paper_tables/*.csv
+
+# OSF 上传包（临时汇集目录，内容已各自入库，不重复入库）
+osf_upload/

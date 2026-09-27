@@ -1,0 +1,40 @@
+dataset,step,n_subjects,n_sessions,n_digraphs,note
+mit,S0_raw_events,85,116,171973,解析层事件在案
+mit,S1_digraph_rules,85,116,171857,digraph 池（keep_flag+时间戳齐）；no_predecessor=116
+mit,S2_universal_rules,85,116,159030,"hold/latency (0,10s] 剔除 12827"
+mit,S3_fixed_text_rules,85,116,155408,flight>3s 剔除 3622
+mit,S4_visit_selection,85,116,155408,MIT 首次访视外 session 剔除 31
+mit,S5_session_rules,85,82,112014,rate<20 剔除 3；valid<100 剔除 0
+mit,S6_person_rules,82,82,112014,person<300 排除 0；唯一 session 被 session 级规则剔光者 3
+tappy,S0_raw_events,266,621,9316858,解析层事件在案
+tappy,S1_digraph_rules,266,621,9316025,digraph 池（keep_flag+时间戳齐）；no_predecessor=0
+tappy,S2_universal_rules,266,621,9301264,"hold/latency (0,10s] 剔除 14761"
+tappy,S4_visit_selection,266,621,9301264,不适用
+tappy,S5_session_rules,266,560,9298974,rate<20 剔除 0；valid<100 剔除 61
+tappy,S6_person_rules,205,538,9295008,person<300 排除 21；唯一 session 被 session 级规则剔光者 40
+typd,S0_raw_events,33,33,26343,解析层事件在案；session 计数=visit（trial 数=338，评估粒度见 CHG-1）
+typd,S1_digraph_rules,33,33,26005,digraph 池（keep_flag+时间戳齐）；no_predecessor=338
+typd,S2_universal_rules,33,33,25893,"hold/latency (0,10s] 剔除 112"
+typd,S3_fixed_text_rules,33,33,24123,flight>3s 剔除 1770
+typd,S4_visit_selection,33,33,24123,不适用
+typd,S5_session_rules,33,27,20822,rate<20 剔除 6；valid<100 剔除 0
+typd,S6_person_rules,27,27,20822,person<300 排除 0；唯一 session 被 session 级规则剔光者 6
+oe,S0_raw_events,232,3451,437915,解析层事件在案
+oe,S1_digraph_rules,232,3451,434464,digraph 池（keep_flag+时间戳齐）；no_predecessor=3442
+oe,S2_universal_rules,232,3451,351761,"hold/latency (0,10s] 剔除 82703"
+oe,S3_fixed_text_rules,232,3451,350272,flight>3s 剔除 1489
+oe,S4_visit_selection,232,3406,350272,不适用
+oe,S5_session_rules,232,1891,237565,rate<20 剔除 0；valid<100 剔除 1515
+oe,S6_person_rules,193,1861,234368,person<300 排除 21；唯一 session 被 session 级规则剔光者 18
+mit,S7_label_rules,82,82,112014,无标签排除 0；单纯震颤主分析排除 0；有标签无事件排除 0
+mit,S8_eligible_main,82,82,112014,PD=42 HC=40
+tappy,S7_label_rules,173,538,9295008,无标签排除 29；单纯震颤主分析排除 3；有标签无事件排除 10
+tappy,S8_eligible_main,173,538,9295008,PD=133 HC=40
+typd,S7_label_rules,27,27,20822,无标签排除 0；单纯震颤主分析排除 0；有标签无事件排除 0
+typd,S8_eligible_main,27,27,20822,PD=12 HC=15
+oe,S7_label_rules,193,1861,234368,无标签排除 0；单纯震颤主分析排除 0；有标签无事件排除 0
+oe,S8_eligible_main,193,1861,234368,PD=83 HC=110
+TOTAL,S0_raw_events,616,4221,9953089,
+TOTAL,S5_session_rules,616,2560,9669375,
+TOTAL,S6_person_rules,507,2508,9662212,
+TOTAL,S8_eligible_main,475,2508,9662212,

@@ -1,0 +1,74 @@
+# baseline_mit.yaml — TODO-3.2 MIT 库内基线：冻结配置 + 开工前决策记录（2026-09-26）
+# 依据：TODO_0925.md TODO-3.2 + 分析冻结协议 §3 + 开工前检查（复审 C，2026-09-26）
+# 纪律：本文件在运行任何基线之前落盘；三条决策（DEC-B1/B2/B3）为"看结果前冻结"的口径，
+#       运行后不得回改；越界动作 = TODO 既定"停，先讨论"，非自动判死。
+
+decisions:
+  - id: DEC-B1
+    item: 基线特征档位
+    decision: "L1 15 列（hold/latency/flight × mean/median/sd/p10/p90）"
+    rationale: "subjects.csv 的 MIT 行只有 L1 列；feature_tiers.yaml W4 警示封锁 MIT L2/L3
+                （键位→手别映射未预注册）。L1-only 是当前唯一合规档位。"
+    deferred: "Phase 4 库内参照与迁移方向的档位对齐规则留待 W4 预注册统一登记"
+
+  - id: DEC-B2
+    item: 切分取整语义 + gate 统计量
+    decision: |
+      split = sklearn 两步 stratified train_test_split(0.6/0.4→0.5/0.5)，
+      实际规模 32/25/25（sklearn 对 82×0.6 向上取整，接受该语义并在此写死）；
+      gate 绑定 LightGBM（协议 §3 primary）的 50-seed 平均 AUC ∈ [0.75, 0.91]；
+      median/全分布/经验 SE 同步入表；LR 如实报告但不绑 gate；
+      越界 → 强制讨论（TODO 既定动作）。
+    rationale: "TODO 原文'50 seeds 汇总+AUC∈[0.75,0.91]'未指明统计量——最忠实读法为
+                primary 模型的 seed 均值；开工前检查实测单 seed 噪声 SE≈0.088、50-seed
+                均值 SE≈0.048，gate 有 7-13% 假停概率（可接受：动作是讨论而非判死）"
+
+  - id: DEC-B3
+    item: 调参纪律
+    decision: "零调参——LR 与 LightGBM 均用官方默认参数（LightGBM random_state=model_seed=42）"
+    rationale: "TODO-3.2 是 go/no-go 工程冒烟性质；零调参 = 零泄漏面（val 折仅记录不用于
+                选择），满足协议 §3 '调参仅源域内部'的最强形式。Phase 4 若需调参另走登记"
+
+run_spec:
+  dataset: mit
+  features: L1_15
+  split: "两步 stratified：train 40%（32）→ val 30%（25）+ test 30%（25）"
+  seeds: configs/seeds.yaml split_seeds（1-50）
+  models:
+    lr: "LogisticRegression 默认参数；StandardScaler 仅在 train 折内 fit"
+    lightgbm: "LGBMClassifier 默认参数 + random_state=42（model_seed，不随 split seed 漂移）"
+  leakage_guards:
+    - "scaler 逐 seed 在 train 折内 fit（禁全池 fit）"
+    - "val/test 一次性使用（无阈值/参数/早停选择）"
+    - "仅读 dataset=='mit' 行，其他库零参与（含归一化统计）"
+    - "同 seed 重跑数值可复现（≤4 位小数；run2 重放曾现 1 ulp 差异，不承诺逐字节）"
+  output: results/baseline_mit.csv（per-seed 行 + gate 判定）
+
+change_log:
+  - id: DEC-B3a
+    date: "2026-09-26"
+    scope: "LightGBM 参数：min_child_samples 20(默认) → 10，其余保持默认"
+    reason: "首跑 gate FAIL 根因为机制性退化：n_train=32 且默认 min_child_samples=20 > 32/2，
+             零分裂 → 单叶常数先验 → 50 seeds AUC 恒 0.5000（LR 0.7868 正常在带内）。
+             官方默认为大数据调校，n=32 不可用。"
+    rule: "最小偏离默认值原则：取允许 ≥1 次分裂的最小改动（32/2=16 ≥ 10 → 1 层 2 叶），
+           参数由规则锁定而非结果试出；登记先于重跑（用户批准：选 A 方案）"
+    first_run_evidence: "commit 30dadcd（results/baseline_mit.csv 首版 LGBM 全 0.5）"
+
+  - id: DEC-B3b
+    date: "2026-09-26"
+    scope: "LightGBM 源域内部微网格选择：{min_child_samples ∈ 5/10} × {max_depth ∈ 2/3}（4 组合）"
+    reason: "DEC-B3a（单分裂树）mean 0.7067 < 0.75 gate——1 层树能力被结构性卡死；协议 §3
+             '调参仅源域内部'授权 val 折模型选择。test 集从未参与任何选择，一次性评估有效性完好。"
+    rule: "预声明网格（非结果试出）；逐 seed 按 val AUC 选择，平局取声明序（mcs 升序、depth 升序）；
+           test 对选中配置只评一次；选择分布入报告；limitations 披露'修正由 gate 失败触发'；
+           用户批准（选项 1，2026-09-26）"
+    first_run_evidence: "commit 30dadcd（B3 退化）；第二轮运行记录（B3a = 0.7067 FAIL）"
+
+archival_policy:
+  id: POL-1
+  date: "2026-09-26"
+  rule: "轮次留档、不无痕覆盖（用户指令 2026-09-26）：正式结果文件每次运行必须同时落
+         results/<name>_run<N>_<决策标签>.csv 轮次档案并随轮次 commit；对已入库结果文件
+         的任何覆盖必须先 commit 前态。事故记录：TODO-3.2 第二轮（DEC-B3a 0.7067）曾被
+         无 commit 覆盖，已以确定性重生成补档（run2 与记录值逐位核验一致）。"

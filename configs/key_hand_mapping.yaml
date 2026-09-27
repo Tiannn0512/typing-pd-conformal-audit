@@ -1,0 +1,144 @@
+# key_hand_mapping.yaml — MIT/OE 键位→手别映射表（W4 预注册版本化附件，TODO-3.4 前置①）
+# 版本：1.0.0 ｜ 冻结：2026-09-26（用户拍板：标准指法分区 + 空格/特殊键不硬归属 +
+#        OE 上档字符按基准键手别 + 不可映射键剔除计数）｜ 效力：本文件一经 commit 即冻结，
+#        此后 L2 手别特征方可产出（feature_tiers.yaml W4 警示解除条件）；任何修改 = 新版本号
+#        + 变更记录 + 预注册更新。
+# 适用：MIT（键名为带引号官方形式，解析时已剥引号并保留下列小写化前的形态——匹配规则见
+#        normalize 规则）与 OE（key 列小写）。Tappy 用原生手别列（不经本表）；TyPD 无 L2。
+
+version: "1.0.1"
+frozen_at: "2026-09-26"  # v1.0.1 增补同日（用户批准），变更见 usage_notes/v1.0.1 条目
+scheme: "标准美式 QWERTY 触键指法分区（standard touch-typing finger zones）"
+
+normalize_rules:
+  case: "键名小写化后匹配（OE 原生小写；MIT 剥引号后 lower）"
+  shifted_rule: "OE 上档可打印字符按 US QWERTY shift 映射回基准键，再按基准键手别归属
+                 （如 '!' → '1' → L-pinky；'?' → '/' → R-pinky；'{' → '[' → R-pinky）"
+  unmatched_rule: "不可映射键 → hand = NA，L2 内剔除并计数（qc 报告须报 unmatched 计数与占比）"
+
+hand_zones:
+  L:
+    pinky: ["`", "1", "q", "a", "z", "tab", "capslock"]
+    ring: ["2", "w", "s", "x"]
+    middle: ["3", "e", "d", "c"]
+    index: ["4", "5", "r", "t", "f", "v", "g", "b"]
+  R:
+    index: ["6", "7", "y", "u", "h", "j", "n", "m"]
+    middle: ["8", "i", "k", ","]
+    ring: ["9", "0", "o", "l", "."]
+    pinky: ["-", "=", "p", "[", "]", "\\", ";", "'", "/"]
+
+unassigned:  # 空格/特殊键：不硬归属，L2 内剔除并计数
+  - space        # 双拇指，无侧别
+  - enter
+  - return
+  - backspace
+  - shift        # 含 shift_l/shift_r/shift_* 变体（前缀匹配 shift）
+  - control      # 含 control_l/control_r/control_* 变体
+  - alt          # 含 alt_l/alt_r/alt_* 变体
+  - meta
+  - altgr
+  - num_lock
+  - caps_lock    # 与 capslock 同义形态
+  - left
+  - right
+  - up
+  - down
+  - delete
+  - insert
+  - home
+  - end
+  - page_up
+  - page_down
+  - escape
+  - mouse        # 官方 autoFilt 已滤，此处兜底
+  - " "          # OE 字面空格键名（v1.0.1）
+  - ""           # OE 空键名（v1.0.1）
+  - spacebar     # OE 变体（v1.0.1）
+  - arrowright   # OE 导航键（v1.0.1）
+  - arrowleft
+  - arrowdown
+  - arrowup
+  - unidentified # OE 未识别事件
+  - process
+  - numlock
+  - contextmenu
+  - pagedown
+  - pageup
+  - acute        # X11 死键（无标准指法分区，v1.0.1）
+  - "[65105]"    # X11 死键 hex（v1.0.1）
+  - "[65027]"
+  - "[65104]"
+  - masculine    # º（西班牙序数符，US QWERTY 无基准键，v1.0.1）
+  - mediaprevioustrack
+  - f11
+  - f16
+
+shifted_base_map:  # 上档字符 → 基准键（US QWERTY；基准键再经 hand_zones 归手）
+  "~": "`"
+  "!": "1"
+  "@": "2"
+  "#": "3"
+  "$": "4"
+  "%": "5"
+  "^": "6"
+  "&": "7"
+  "*": "8"
+  "(": "9"
+  ")": "0"
+  "_": "-"
+  "+": "="
+  "{": "["
+  "}": "]"
+  "|": "\\"
+  ":": ";"
+  '"': "'"
+  "<": ","
+  ">": "."
+  "?": "/"
+  "A": "a"
+  "B": "b"
+  "C": "c"
+  "D": "d"
+  "E": "e"
+  "F": "f"
+  "G": "g"
+  "H": "h"
+  "I": "i"
+  "J": "j"
+  "K": "k"
+  "L": "l"
+  "M": "m"
+  "N": "n"
+  "O": "o"
+  "P": "p"
+  "Q": "q"
+  "R": "r"
+  "S": "s"
+  "T": "t"
+  "U": "u"
+  "V": "v"
+  "W": "w"
+  "X": "x"
+  "Y": "y"
+  "Z": "z"
+
+aliases:  # X11 keysym 别名 → 规范字形/基准（v1.0.1，MIT 数据实测；先归一化再走 zones/shifted）
+  period: "."
+  comma: ","
+  colon: ";"
+  minus: "-"
+  quotedbl: '"'
+  question: "?"
+  exclam: "!"
+  exclamdown: "!"
+  ntilde: "n"
+  ccedilla: "c"
+
+usage_notes:
+  - "L2 特征 = hand ∈ {L, R} 的分层统计（空格/特殊键/unmatched 不参与，剔除量入 QC 计数）"
+  - "S 层（空格）按 feature_tiers.yaml W4 预注册条款处理，不进本表 L/R 分层"
+  - "MIT 首行 Shift_L 等长 meta 键已被官方 autoFilt 剔除，本表 unassigned 为兜底"
+  - "匹配优先级：unassigned 精确/前缀匹配 > aliases 归一化 > shifted_base_map > hand_zones 精确匹配 > NA"
+  - "v1.0.1 变更记录：增补 MIT X11 keysym 别名 10 项 + OE 空格/导航/死键 unassigned 17 项
+    （复发猎杀 B/发现3：keysym 形态占 MIT unmatched 61%，本为可映射物理键——用户批准 2026-09-26）"

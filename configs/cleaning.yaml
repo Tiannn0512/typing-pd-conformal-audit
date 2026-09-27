@@ -1,0 +1,90 @@
+# cleaning.yaml — 清洗规则冻结配置（TODO-2.1，2026-09-26）
+# 依据（效力顺序）：分析冻结协议 v1 §1 Dataset / §2 Feature ｜ 研究计划书 v1.3.2 §4.1 ｜
+#                  数据可行性报告 §三（Francesconi 四信号口径）｜ TODO_0925.md TODO-2.1
+# 纪律：本文件所有规则 label-blind（标签仅用于队列表的分组/排除行，绝不参与特征清洗）；
+#       任何规则改动 = 设计变更，须走冻结协议变更记录 + 论文 limitations 披露
+
+# ---------- 0. digraph 池定义 ----------
+digraph_pool:
+  # 仅 keep_flag=True 行进入（解析层 QC 打标行永不入池：Tappy subj_mismatch/field_invalid/时序坏值、OE 孤立键）
+  require_keep_flag: true
+  # 每.session 组首行无前驱（latency/flight 为 NaN）→ 非 digraph，不入池（计数为 no_predecessor，非违规）
+  require_digraph_timestamps: true   # latency 与 flight 均非 NaN
+
+# ---------- 1. digraph 级规则（四库通用，预登记原文） ----------
+digraph_rules:
+  hold_le0_remove: true        # hold ≤ 0 剔除
+  hold_gt10s_remove: true      # hold > 10s 剔除（阈值 = 10000 ms）
+  latency_le0_remove: true     # latency ≤ 0 剔除
+  latency_gt10s_remove: true   # latency > 10s 剔除
+  # 注意：冻结规则仅命名 hold/latency；flight 不设通用阈值（固定文本 flight 规则见下）
+
+# ---------- 2. 固定文本 vs 自由文本分档 ----------
+text_type:
+  mit: fixed     # 抄写标准文本（Francesconi 固定→固定锚点对的组成库；0.89-0.91 跨库锚）
+  typd: fixed    # 抄写固定文本（ReadMe：The Little Prince 摘句 + 统一首段）
+  oe: fixed      # 抄写固定 Wikipedia 句子
+  tappy: free    # 家庭系统级自然打字（自由文本不清洗，可行性报告"自由文本不清洗"）
+fixed_text_rules:
+  flight_gt3s_remove: true     # digraph flight > 3s 剔除（阈值 = 3000 ms，仅固定文本库）
+  min_chars_per_min: 20        # session 打字速率 < 20 字符/分 → 整 session 剔除（仅固定文本库）
+  rate_definition: "rate = session 有效 digraph 数 / (该 session 末次 press − 首次 press)分钟"
+free_text_rules:
+  note: "Tappy 不适用 flight>3s 与速率规则（预登记：自由文本不清洗）；仅适用 §1 通用规则"
+
+# ---------- 3. session 定义与 session 级规则 ----------
+session_definition:   # 与 Phase 1 解析器口径一致（TODO-1.2/1.3 已冻结）
+  mit: "visit 文件（file_1/file_2，文件名 stem）"
+  tappy: "月文件（USER_YYMM）"
+  typd: "visit（同一受试者全部 TEX trial 合并评估；digraph 派生仍在 trial 内，不跨 trial）"
+  oe: "participant × response（一次连续录入）"
+session_rules:
+  min_valid_digraphs: 100      # session 有效 digraph < 100 → 该 session 剔除（四库统一）
+
+# ---------- 4. 访视选择（冻结协议 §1：每受试者仅首次访视口径） ----------
+visit_selection:
+  mit_first_visit_only: true   # MIT 2 次访视受试者 → 仅保留文件名 epoch 最早的一次（label-blind）
+  note: "仅 MIT 存在多次临床访视；Tappy 月文件/OE response 为自然多 session 设计，TyPD 单访视，均不适用"
+
+# ---------- 5. person 级规则 ----------
+person_rules:
+  min_valid_digraphs: 300      # person 有效 digraph（在存活 session 内）< 300 → 排除
+
+# ---------- 6. 队列定义（此处才允许用标签；产出 results/cohort_flow.csv） ----------
+cohort_rules:
+  require_label: true          # 无标签 → 不可分类 → 排除（Tappy 49 个 events-no-labels 入此行）
+  require_events: true         # 有标签无事件 → 排除（Tappy 10 个 labeled-no-events 入此行）
+  tremor_only_exclude_main: true   # Tappy Tremors=True & Parkinsons=False（单纯震颤）主分析排除；
+                                   # 敏感性分析分别计入 PD 与 HC 各复算一次（Phase 4 敏感性批）
+  oe_hy0_rule: "OE H&Y0 期自述保留（公开 CSV 无 H&Y 字段，规则不可操作化——主分析保留全部自报 PD，
+                 敏感性'剔除 H&Y0'记录为不适用，与 Tappy UPDRS 字段不可用同性质，见计划书 §4.6）"
+  label_source:
+    mit: clinical    # 临床金标准
+    typd: clinical   # 临床金标准
+    tappy: self_report
+    oe: self_report
+
+# ---------- 7. 特征档位（本管线产出范围） ----------
+features_built:
+  L1_all: "hold/latency/flight × mean/median/sd/p10/p90（四库，15 列；NaN 不计入统计）"
+  L2_tappy_native: "Tappy 原生手别列（hand_from L/R 分层 × hold/latency/flight mean，6 列；S 空格层处理规则待 W4 预注册，与 feature_tiers.yaml 警示一致）"
+  deferred: "MIT/OE 的 L2（键位→手别映射）与 L3（字符二连键）按 configs/feature_tiers.yaml
+             冻结警示：须待 W4 预注册冻结映射口径后方可产出，本管线不生成（scope discipline）"
+
+# ---------- 变更记录（冻结协议 §变更条款，append-only） ----------
+change_log:
+  - id: CHG-1
+    date: "2026-09-26"
+    scope: "typd session 粒度：trial → visit（同一受试者全部 trial 合并评估 session 级规则）"
+    reason: "trial 为同一次实验室访视内的连续抄写块（40-115 字符/块），按 trial 评估 <100 有效
+             digraph 规则将结构性摧毁金标准库（33 人仅剩 7 人存活：valid<100 剔 295/338 trial（flight 后口径，2026-09-26 审核复算勘误）；
+             冻结协议原文未定义 TyPD session 粒度，此为实现口径澄清而非规则修改"
+    approval: "用户拍板（AskUserQuestion 选项 A，2026-09-26）"
+    effect: "digraph 派生口径不变（仍在 trial 内，无跨 trial 二连键）；仅 session 级规则
+             （rate≥20 字/分、有效 digraph≥100）的评估单位升为访视"
+deferred_decisions:
+  - id: DEF-1
+    item: "OE 精确重复事件行（participating=2,063 / redundant=1,203，占 keep 行 0.27%）是否去重"
+    status: "**定案（2026-09-26 用户批准）：保留原样（不去重）** + 论文 limitations 披露。
+             理由：占比 0.27% 且此时去重属结果后决策；保留为唯一不受结果左右的选项。"
+    deadline: "已定案（原 deadline W4 前提前完成）"

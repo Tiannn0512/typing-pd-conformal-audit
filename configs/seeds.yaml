@@ -1,0 +1,29 @@
+# seeds.yaml — 全项目随机性唯一口径（TODO-0.1 锁定，2026-09-25）
+# 依据：研究计划书 v1.3.2 §4.3（统计纪律）+ 分析冻结协议 v1 §3/§4
+# 纪律：任何切分/重抽/对照实验只能引用本文件中的 seed 区间，禁止现场发明新 seed
+
+# 受试者级 train/calib/test 切分与重复实验：seed 1-50（50 seeds 汇总口径，
+# 与计划书"50 seeds 汇总"、TODO-3.2 --seeds configs/seeds.yaml 对应）
+split_seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+              11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+              21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+              31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+              41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+
+# 模型内部随机性（LightGBM 等）：固定单 seed，保证同一数据同一结果
+model_seed: 42
+
+# bootstrap 重抽次数（AUC CI、覆盖辅助区间）：1000 次
+bootstrap_n: 1000
+bootstrap_seed: 42
+
+# 应力测试（合成翻转/重采样）随机化种子：与 split_seeds 复用 1-50，
+# 保证剂量-反应曲线的点估计可复现
+stress_seed_base: 1
+
+# CP 合成单元测试（tests/test_cp_synthetic.py）：独立固定 seed，测试必须确定性
+unit_test_seed: 20260925
+
+# 对拍脚本衍生 seed（2026-09-26 登记，消除"现场发明 seed"审核发现）
+derived_seeds:
+  mapie_crosscheck_second_split: 20260926  # scripts/mapie_crosscheck.py 第二重切分 = unit_test_seed + 1

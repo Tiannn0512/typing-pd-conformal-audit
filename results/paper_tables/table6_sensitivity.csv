@@ -1,0 +1,19 @@
+variant,direction,coverage
+anchor_seed1,tappy2mit,"0.5976 [0.4834, 0.7044]"
+anchor_seed1,mit2tappy,"0.8497 [0.7876, 0.8994]"
+anchor_seed1,gold_merged2self,"0.7322 [0.6837, 0.7769]"
+alpha_020,tappy2mit,"0.5732 [0.4591, 0.6818]"
+alpha_020,mit2tappy,"0.7052 [0.6312, 0.7720]"
+alpha_020,gold_merged2self,"0.5219 [0.4693, 0.5740]"
+seeds_1_50,tappy2mit,0.6688 ± 0.1378
+seeds_1_50,mit2tappy,0.8533 ± 0.0579
+seeds_1_50,gold_merged2self,0.8518 ± 0.0664
+tremor_as_pd,tappy2mit,"0.5976 [0.4834, 0.7044]"
+tremor_as_pd,mit2tappy,"0.8352 [0.7720, 0.8868]"
+tremor_as_pd,gold_merged2self,"0.7263 [0.6777, 0.7712]"
+tremor_as_hc,tappy2mit,"0.6707 [0.5581, 0.7706]"
+tremor_as_hc,mit2tappy,"0.8523 [0.7911, 0.9012]"
+tremor_as_hc,gold_merged2self,"0.7344 [0.6862, 0.7788]"
+session_quarter,tappy2mit,"0.5976 [0.4834, 0.7044]"
+session_quarter,mit2tappy,"0.8497 [0.7876, 0.8994]"
+session_quarter,gold_merged2self,"0.7322 [0.6837, 0.7769]"
