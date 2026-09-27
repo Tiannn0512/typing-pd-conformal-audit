@@ -259,8 +259,8 @@ def fig6_stress_tests() -> None:
     ax_c.set_xticks(x, [g[0] for g in groups], fontsize=7)
     ax_c.set_ylim(0, 1.09)
     ax_c.set_ylabel("Class-conditional coverage")
-    ax_c.set_xlabel("C  Three-arm real-transfer test (shaded band = ±5 pp practical-equivalence "
-                    "tolerance around observed)", fontsize=8, loc="left")
+    ax_c.set_xlabel("C  Three-arm real-transfer test (shaded = pre-specified ±5 pp "
+                    "practical-equivalence tolerance; not a CI)", fontsize=8, loc="left")
     ax_c.legend(loc="upper left", fontsize=6.5, ncols=2, frameon=True, framealpha=1.0,
                 edgecolor="none")
     fig.savefig(FIG / "fig6_stress_tests.png")
