@@ -75,3 +75,12 @@
 ## 结果层影响
 
 无。全部修订限于 reports/、README、logs/、TODO_0925.md；figures/ 与 results/ 未动。
+
+## CHG-REV3 ｜ 第三轮审稿 15 点 → V3.0（2026-09-27，投稿前技术清理）
+
+- 评估：12 点需改全改、3 点 V2.0 已达标；零新实验（结果冻结纪律）。
+- **标题决定（重开用户冻结项，需用户知悉）**：候选 B "Score-Dependent Conformal Coverage…" → "Cross-Dataset Conformal Coverage Audit of Parkinson's Disease Typing Classifiers Under Deployment Shift"（审稿人两轮持续指出两分数撑不起标题核心性质，第二点选项 2 更贴 JMS；解耦图谱主线不变，仅标题校准到证据强度；候选 B 可随时回退）。摘要 "score-dependent" 同步改 "Coverage behavior differed between the two evaluated score functions"。
+- 分位数定义按实现对齐（src/cp/conformal.py：k=⌈(n_cal+1)(1−α)⌉、第 k 小、≤收录、k>n_cal 全集退化）——审稿 agent 逐行对拍确认。
+- guarantee/empirical 术语、治理措辞降级、OSF 标识进正文、3.2 单例构成改为冻结表推导（≥25/33）、50-seed 措辞、Fig6 非 CI 声明、贡献 (i) 范围澄清、伦理软化、ref13 旗标更新。
+- 终审 PASS_WITH_FIXES（单 minor：3.2 误引 Table 2，已删）。终版：摘要 247 词、正文 2,913 词、16:16 文献、图 1–6。
+- 公开仓库第三 commit e65676f（本次导出按检查清单剔除 04_关键文献，PDF 复查零命中）。
