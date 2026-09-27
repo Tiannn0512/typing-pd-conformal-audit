@@ -130,3 +130,9 @@
 - 每图独立期刊配色家族：fig1 NPG（LR #3C5488 / LGBM #E64B35）；fig2 JAMA（PD #B24745 / HC #374E55）；fig3 AAAS（LR #3B4992 / LGBM #EE0000）；fig4 LANCET（#ED0000 / #00468B / #42B540）；fig5 JAMA（朴素 #374E55 / 加权 #DF8F44）；fig6 AAAS（PD #3B4992 / HC #EE0000 / symmetric #008280）。
 - fig1 图例移出绘图区（右侧居中，bbox_to_anchor=(1.01,0.5)）——用户圈选的两行图例。
 - 六图重生成并逐张目检；媒体替换更新两个 V5.1 docx（文字零改动）。本地 efb92c2；公开仓库同步。
+
+## CHG-FIG10 ｜ 六图重配色为 SciencePlots/Tol CNS 标准色（2026-09-27，用户二轮反馈"配色不好看"）
+
+- 依据查证：CNS 图的实际 matplotlib 标准即 **SciencePlots science 色环**（#0C5DA5 蓝 / #00B945 绿 / #FF9500 橙 / #FF2C00 红 / #845B97 紫 / #474747 灰；官方注明 colorblind friendly）+ **Paul Tol muted**（#4477AA / #EE6677），Nature/Cell 系图广泛使用。
+- 分图：fig1 science 蓝/红；fig2 Tol 玫瑰/蓝（PD/HC）；fig3 science 紫/橙（LR/LGBM）；fig4 science 蓝/绿/橙（三方向）；fig5 灰/绿（朴素/加权）；fig6 science 蓝/红/紫（PD/HC/symmetric，含容差带同色）。
+- 六图重生成逐张目检；媒体替换更新两个 V5.1 docx（文字零改动）。本地 e8fb42c；公开仓库同步。
