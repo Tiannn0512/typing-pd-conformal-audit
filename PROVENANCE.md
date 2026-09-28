@@ -18,9 +18,30 @@ governance tags are called out explicitly.
 | v1.0-prereg | 6459a9ec9a88b4039008ceff83500c0900d33c57 | 2026-09-26 17:15:36 | Frozen analysis plan, pre-registered on OSF before any cross-dataset coverage was computed (OSF registration Sep 26, 2026, 6:09 PM, embargoed, https://osf.io/j9fvx) |
 | results-frozen-v1 | ce26f33446119a25d162fb529d5872dd9e615702 | 2026-09-27 09:33:42 | Result layer frozen (all results/*.csv formal tables + analysis code); post-freeze changes require a new round per POL-1 |
 
-## Full commit chain (83 commits, 2026-09-25 → present)
+## Full commit chain (104 commits, 2026-09-25 → present)
 
 ```
+e31bfed61c91da7fadeb8e3e7cdd82032a1960f4 | 2026-09-28 17:48:31 +0800 | docs: swap V5.1 embedded figures to audited palette set; fix Fig.6 panel lettering (CHG-FIG13)
+04edb4b8be8593a6761f1c0ac940755d976388d1 | 2026-09-28 17:44:45 +0800 | figs: per-figure palettes + audit-driven correctness fixes (CHG-FIG13)
+1ba0ae173dd5d8ccd3f05bcabd05df363ec96654 | 2026-09-27 19:31:56 +0800 | docs: changelog CHG-FIG11
+2673575b53013cc844cf18b3bff3477353de4cf1 | 2026-09-27 19:31:27 +0800 | style: figures recolored to harmonious soft palette from user-provided swatches
+266f92a25be3b816e03368327fdec20d2de78a88 | 2026-09-27 19:26:15 +0800 | docs: changelog CHG-FIG10
+e8fb42c7cead136a2d4136d2494effd794b7ebe8 | 2026-09-27 19:23:38 +0800 | style: recolor figures to SciencePlots/Tol CNS palettes (user feedback round 2)
+0ae9a4926219f48593504f95523be792fe3eec49 | 2026-09-27 19:19:21 +0800 | docs: changelog CHG-FIG9
+efb92c297337192daa1e1c88a239f602ec510034 | 2026-09-27 19:18:54 +0800 | style: per-figure distinct journal palettes + fig1 legend moved outside (user feedback)
+43dba87581aee6eb83e9a905779ce57c6de3d1da | 2026-09-27 18:35:17 +0800 | docs: changelog CHG-FIG8
+9b2d44ad034678b5234b15c61d2cdd346a42a8d7 | 2026-09-27 18:34:48 +0800 | style: figures overhauled to CNS-journal conventions (user-requested)
+acac7c40118652ff8db32804fb1772d16298a72b | 2026-09-27 18:21:32 +0800 | docs: changelog CHG-FIG7 (fig6 legend clip fix)
+b46472f70e5b47d7149e910a9642156ecbb56c25 | 2026-09-27 18:21:08 +0800 | fix: fig6 panel C legend clipped the 1.0-height bar (user-reported)
+30ad50a7f1438b09d8b61d66b3dd75f3bc4dc9e8 | 2026-09-27 18:02:39 +0800 | docs: changelog CHG-STRUCT2 (V5.1 AI-disclosure removal, compliance caveat noted)
+17680fc75b7478abfa439109b2d81507ae67c6eb | 2026-09-27 18:02:12 +0800 | docs: manuscript Typing_PD(V5.1) — AI-assistance disclosure section removed (user decision)
+032779a862361106c2355e0321dbdb50d4a0b7a2 | 2026-09-27 17:52:37 +0800 | docs: changelog CHG-STRUCT1 (V5.0 restructure to published JMS template)
+5a2b1b72eccdff796b2aa0297c1e78d5c69a2c18 | 2026-09-27 17:52:10 +0800 | docs: manuscript Typing_PD(V5.0) — restructured to match published JMS article layout (TODO-5.2f)
+f56c4e69a0602d5122c137b58067adff9a26c423 | 2026-09-27 17:38:45 +0800 | docs: changelog CHG-REV4 (V4.0 fourth review round, final audit PASS)
+1755d8fb41bdd910496a32c3361d8f4d8e1f320e | 2026-09-27 17:38:06 +0800 | docs: manuscript Typing_PD(V4.0) — fourth review round (14 points) applied (TODO-5.2e)
+37439d7868fc5ad11dd9cc9bc046c59486570118 | 2026-09-27 17:21:19 +0800 | docs: ledger TODO-5.2d + changelog CHG-REV3 (V3.0 third review round)
+23b9f3c85644faae8aaa31437971ae3813c4266b | 2026-09-27 17:20:11 +0800 | docs: manuscript Typing_PD(V3.0) — third review round (15 points) applied (TODO-5.2d)
+6cb238e237b3c8fbd71e21c77ab5b1ffa1890543 | 2026-09-27 16:50:59 +0800 | docs: manuscript Typing_PD(V2.0) — 26-point review applied + reviewer-skill re-audit (TODO-5.2c)
 08801163b80b5660af1e9b1d27699a3ca765983e | 2026-09-27 16:03:14 +0800 | docs: manuscript Typing_PD(V1.0) JOMS-compliant + reference verification (TODO-5.2b/5.3 reroute)
 b480918a5c6f6d839ab203c103507c984827d661 | 2026-09-27 13:10:58 +0800 | fix: figure overlap round 3 (visual-judge pixel audit) - fig1 legend white frame + ref-label offsets, fig2 n-labels white bbox + dynamic offset below 0.90 line, fig3 label anchoring fix (pt-offset root cause) + dual-line avoidance, fig4 nominal label to empty segment + marker white edges + audit label below line, fig5 marker white edges; docx regenerated
 1b79875b092c394e1d3dec56f2cb802eef1f7f64 | 2026-09-27 12:27:01 +0800 | docs: ZH manuscript synced to v1.0-rev (full mirror of revision round 1); both docx regenerated with final figures

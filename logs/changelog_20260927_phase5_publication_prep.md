@@ -142,3 +142,15 @@
 - 主基色 = 用户套一（生物机制图百搭色）：#385A9E 强蓝 / #FAD9C7 蜜桃 / #A4B6D6 长春花蓝 / #CBB9B3 灰褐 / #9FC1D1 柔蓝 / #E8D1D3 灰粉；对比色取自套二：琥珀 #EFA94A、绿 #279E7D、玫瑰 #D48CA6；套三高亮色按其自带提醒（区分度）不采用。
 - 语义锚定：强蓝 = LR 主参照 / PD 条件；琥珀 = LGBM 对照（fig1/3）；玫瑰 = HC 条件（fig2/6）；fig4 三方向 = 蓝/绿/琥珀；fig5 = 长春花蓝(朴素) vs 强蓝(加权)。
 - 六图重生成逐张目检（fig1/2/5/6 全图 + fig3/4 同锚定）；媒体替换更新两个 V5.1 docx（文字零改动）。本地 2673575；公开仓库同步（一次成功）。
+
+## CHG-FIG13 ｜ 每图独立配色 + 子代理审计揪出两个结构性画图 bug（2026-09-28，用户验收后定稿提交）
+
+- **配色定稿（相邻图不同套，用户"整体太单一"反馈）**：fig1 海军蓝/玫瑰、fig2 陶红/灰蓝（锁规格不变）；fig3 LR 青 #3E8474 / LGBM 梅 #8E6C9E；fig4 方向三色 T→M 赭 #C28A3A / M→T 海军 #315A86 / C→S 梅 #8E6C9E；fig5 朴素灰 #CFCFCF / 加权青 #3E8474；fig6 arms PD→HC 梅 / HC→PD 赭 / symmetric 灰蓝 + C 面板类色同 fig2；fig7 发散玫瑰→海军不变。
+- **bug 1（严重，fig3）**：LGBM 面板自初版脚本起画的是 LR 数据（model 循环内列名写死 auc_mean/coverage_mean，只换了参照常量）。修正读 lgbm_auc_mean/lgbm_coverage_mean 后 LGBM 几何大变：5/12 方向 ΔCoverage≥0（覆盖守住名义水平），解耦论证反而更强。**正文回查**：解耦段全部数字直出 CSV（comparator 覆盖 11/12 更高、AUC 12/12 更低、LR 覆盖 0.58–0.91 对 AUC 0.55–0.81），无一被旧图误导，零文字改动。
+- **bug 2（fig6）**：A/B 两 panel 各画了两种 scope（原脚本如此）。拆分后 A=cal_only、B=train_cal 才互不相同。x 刻度+xlabel 缺失根因 = 混用 add_subplot(2,2,1)/(2,1,2) 两个 gridspec 致 constrained_layout 测量失效 → 单一 GridSpec 修复；画布 7.4→8.8 in、图例移图外顶部、C 面板 PD/HC 双侧数值标注。
+- **fig4**：重合双星 (0,1.000) x 让位 ±1.8（图注补说明）；图例补全 ★=Weighted CP (0 labels) 与 ◯=q̂→∞ 满集退化点（"看不懂"主因）。
+- **fig3**：标签白底衬全撤（用户反馈白底切断 0 参考虚线），按新几何逐点调偏移，12 点无遮挡；LR Y→M 下移至点右下。
+- **fig7**：图内标题删除（JOMS 规范）；画布 6.8→5.9 in 收紧左侧留白（5.6 时 constrained_layout 静默失效裁掉 source 轴标签——收窄画布必须核验装饰齐全）。
+- **审计**：documents:visual-judge 逐像素对冻结 CSV（fig1 k/n、fig7 十二格、fig6 四组柱、fig4 五点全对）。终态 fig1/2/4/5/6/7 PASS；fig3 数据修正+标签修复裁片核验。
+- **docx**：六图媒体替换（rId35–50 哈希定位）；fig5/fig6 显示纵横比同步（5.83×2.51 / 5.83×7.13 in）；**Fig. 6 图注板次错位修正**（原"A:左仅校准/右训练+校准。B:三臂"与图内 A/B/C 标题错一代稿时期，EN+ZH 同步改为 A=仅校准、B=训练+校准、C=三臂）；fig4 图注补星标让位说明（EN+ZH）。
+- 本地 04edb4b（图+脚本）+ e31bfed（docx）；PROVENANCE 链续至 e31bfed；公开仓库同步。
