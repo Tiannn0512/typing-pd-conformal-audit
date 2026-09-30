@@ -179,4 +179,5 @@
 - ZH 表 2 表注："家族wise Holm 校正" → "Holm 家族校正"（中英混杂机器味）；"主终点家族" → "主家族"（与表 1 单元格用语一致）。
 - V6.1 同步清单两处随本轮落实：表 1 单元格 "Clinical gold standard"/"临床金标准" → "Clinically diagnosed"/"临床确诊"（Methods(V3) R1 既有裁定）；表 1 表注 "Frozen cohort construction"/"冻结队列构建" → "Fixed cohort"/"固定队列"（frozen 为内部治理词）。
 - ZH 表 1 表注引号错字修正：下表”主家族” → “主家族”；EN/ZH 表注删 "below/下表"（自指冗余）。
-- 表注其余注册术语（α=0.10、Holm、confirmatory seed、判定词、±容差）按精度纪律不动。数字零改动。附带一致性修正：Data Availability 段 frozen/fixed cohort 措辞 EN↔ZH 对齐（ZH 因全词匹配先行命中，EN 同句补齐）；正文其余 "冻结队列/临床金标准" 残留（摘要/贡献/结果）属 V6.1 待并清单，本轮不动。
+- 表注其余注册术语（α=0.10、Holm、confirmatory seed、判定词、±容差）按精度纪律不动。数字零改动。
+- **表 1 常规化重构（用户："这角色列没在别的论文见过"）**：Role 列把标签来源与方向角色两件事压在一列（V4.0 一致性修复的产物）。现拆出 Labels/标签 列（Clinical/自报，与方向名对齐），方向角色信息撤出表格——Methods 正文已完整交代三个主方向与合并池构成（EN/ZH 均核验），表注改一句指向 Methods；表头 Eligible/入组 → Subjects/人数。表格变为常规数据集汇总表，信息零损失。附带一致性修正：Data Availability 段 frozen/fixed cohort 措辞 EN↔ZH 对齐（ZH 因全词匹配先行命中，EN 同句补齐）；正文其余 "冻结队列/临床金标准" 残留（摘要/贡献/结果）属 V6.1 待并清单，本轮不动。
