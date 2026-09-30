@@ -2,7 +2,7 @@
 
 **A pre-registered, four-dataset audit of split-conformal prediction coverage under cross-dataset deployment of keystroke-based Parkinson's disease (PD) classifiers.**
 
-Manuscript: `reports/Typing_PD(V1.0).docx` (English; `reports/Typing_PD(V1.0)_zh.docx` is an internal Chinese mirror) — in preparation for submission to *Journal of Medical Systems*.
+Manuscript: `reports/Typing_PD(V6.0).docx` (English; Chinese version `reports/Typing_PD(V6.0)_zh.docx`) — in preparation for submission to *Journal of Medical Systems*.
 
 ## Purpose of this repository
 
@@ -10,7 +10,7 @@ This is the **public timestamp archive** for the study. It exists to establish a
 
 - **Frozen analysis plan**: `docs/analysis_plan_v1.md` + `01_研究计划/分析冻结协议_v1.md` (pre-registered on OSF, tag `v1.0-prereg`, before any cross-dataset coverage was computed).
 - **Frozen results**: everything under `results/` is the frozen result layer (tag `results-frozen-v1` in the development repository, commit `ce26f33`, 2026-09-27). Post-freeze changes to results follow a new-round protocol with a change log — they are never silently overwritten.
-- **Provenance**: `logs/` contains per-phase change logs, review-gate records, and handoff notes; `TODO_0925.md` is the full execution ledger with per-task evidence.
+- **Provenance**: `PROVENANCE.md` records the full development commit chain and the two governance tags (pre-registration and result freeze).
 
 ## Headline findings (from the frozen result layer)
 
@@ -23,9 +23,7 @@ This is the **public timestamp archive** for the study. It exists to establish a
 ## Repository map
 
 ```
-00_README.md            project index (Chinese, internal)
-README.md               this file (public)
-TODO_0925.md            execution ledger (pre-registration of workflow, per-task evidence)
+README.md               this file
 01_研究计划/             research proposal + analysis freeze document
 02_查新报告/             novelty scan report
 03_可行性分析/           data feasibility report
@@ -38,8 +36,7 @@ scripts/                figure and paper-table generation (derive all numbers fr
 results/                frozen aggregate result tables (CSV; no subject-level data)
 results/paper_tables/   camera-ready tables derived programmatically from frozen results
 figures/                publication figures (600 dpi, no in-image titles)
-reports/                manuscript (Typing_PD(V1.0).docx) and internal Chinese mirror
-logs/                   change logs, review-gate records, handoffs
+reports/                manuscript (Typing_PD(V6.0).docx; _zh = Chinese version)
 tests/                  unit tests incl. conformal implementation cross-checks (MAPIE 1.5.0)
 ```
 
@@ -52,7 +49,7 @@ The study uses four **public** datasets; **no data files are redistributed in th
 - TyPD / i-PROGNOSIS DS2.5 — application-based release (clinical labels)
 - Online English — web-based typing dataset accompanying its publication (self-report labels)
 
-The frozen cohort construction with step-by-step inclusion/exclusion counts is in the ledger and result tables.
+The frozen cohort construction with step-by-step inclusion/exclusion counts is documented in the analysis freeze documents (`docs/analysis_plan_v1.md`, `01_研究计划/分析冻结协议_v1.md`) and the result tables.
 
 ## Reproducibility
 
