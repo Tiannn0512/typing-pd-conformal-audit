@@ -18,9 +18,11 @@ governance tags are called out explicitly.
 | v1.0-prereg | 6459a9ec9a88b4039008ceff83500c0900d33c57 | 2026-09-26 17:15:36 | Frozen analysis plan, pre-registered on OSF before any cross-dataset coverage was computed (OSF registration Sep 26, 2026, 6:09 PM, embargoed, https://osf.io/j9fvx) |
 | results-frozen-v1 | ce26f33446119a25d162fb529d5872dd9e615702 | 2026-09-27 09:33:42 | Result layer frozen (all results/*.csv formal tables + analysis code); post-freeze changes require a new round per POL-1 |
 
-## Full commit chain (107 commits, 2026-09-25 → present)
+## Full commit chain (109 commits, 2026-09-25 → present)
 
 ```
+c399942c7791200b84dc2fbab996ed46729226fe | 2026-09-30 17:55:49 +0800 | docs: naturalize public-facing documents, drop internal workflow notes (CHG-PUB3)
+caeb1237c282de2f5cb8e1691271a90fcc90409f | 2026-09-30 10:32:27 +0800 | docs: changelog CHG-FIG14 + PROVENANCE chain extended to 499316f
 499316f494a5d78c6c1d45d9f618c2bc8b8d6085 | 2026-09-30 10:31:48 +0800 | docs: V6.0 manuscript (EN+ZH) with CHG-FIG14 figures embedded
 532f781a37e782d459852e780fe00bfee6ef3fff | 2026-09-30 10:31:48 +0800 | figs: strip explanatory/meta annotations from figure text (CHG-FIG14)
 49a0972d7a3a7ab7c6c8cb7b34bbb384dba6f167 | 2026-09-28 17:52:15 +0800 | docs: changelog CHG-FIG13 + PROVENANCE chain extended to e31bfed
