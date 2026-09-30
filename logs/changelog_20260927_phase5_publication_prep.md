@@ -161,3 +161,14 @@
 - 删除清单：①"(pre-specified)"（fig1/fig4 阈值标注、fig5 图例 → "audit 0.80"）；②fig6 面板标题 "(theory-aligned)"/"(deployment)" 与 C 面板 xlabel 长串括注 → "C Three-arm real-transfer test"；③角色括注 "LR (primary reference)"/"LGBM (comparator)" → "LR"/"LGBM"（fig1 图例 + fig2/fig3 面板标题）；④fig6 "baseline (no corruption)" → "Baseline"；⑤"Weighted CP (0 labels)" → "Weighted CP"（fig4/fig5 图例）；⑥fig3 ylabel "(50-seed mean)"。fig7 色条 "(50 seeds)" 保留（事实性均值说明）。
 - 数据/几何/版式零改动，七 PNG 像素尺寸与 CHG-FIG13 完全一致（extent 无需动）。
 - 换图目标改为 **V6.0 EN+ZH**（fig7 已入正文，rId34–52 七图哈希映射重做）；两 docx 同时首次入库（V6.0 文字为写作窗口 09-29 版）。本地 532f781 + 499316f；公开仓库同步。
+
+## CHG-PUB3 ｜ 公开文档去 AI 味 + 内部工作流内容出库（2026-09-30，用户任务书）
+
+- 规则：图例式口头禅零命中；按任务书删除内部工作流叙述、模板化措辞、表情符号；未来新增文档（含 commit message 正文）先自查再上传。
+- README：稿件指针 V1.0→V6.0；Provenance 条目改指 PROVENANCE.md；仓库地图删去仅存在于开发仓库的条目；冻结队列构建指引改指冻结文档。
+- 查新报告：删"信号数据线智能体 + 文献核实智能体"通道叙述；"邻接警报"改平实"邻接提示"。
+- 可行性报告：绿灯/卖点/防问穿等内部措辞改平实学术表述；表情符号清除；事实修正 OE 的 OSF 链接 ean63→ew34b（与稿件、清单一致）。
+- DATA_MANIFEST：删代理端口/网速/断点续传等下载运维记录与时间线；TODO-0.2/playbook 内部术语删除；SHA256/字节数/条目数对账事实全保留。
+- 公开仓库出库：00_README.md（内部工作索引）、TODO_0925.md（执行台账）、logs/（handoff/changelog/errata/novelty 扫描/烟雾状态）整体不再公开；logs/osf_doi.txt 保留（OSF 预注册记录，受保护）。冻结文档（研究计划书各版本、分析冻结协议、docs/analysis_plan_*）、results/、AI 披露句、OSF/tag 引用全部未动。
+- 导出 checklist 更新：git archive 后除 rm -rf 04_关键文献 外，追加 rm TODO_0925.md 00_README.md 与 logs/ 清理（保留 osf_doi.txt）。
+- 本地 c399942；公开仓库同步。
