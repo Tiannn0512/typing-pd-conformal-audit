@@ -18,9 +18,11 @@ governance tags are called out explicitly.
 | v1.0-prereg | 6459a9ec9a88b4039008ceff83500c0900d33c57 | 2026-09-26 17:15:36 | Frozen analysis plan, pre-registered on OSF before any cross-dataset coverage was computed (OSF registration Sep 26, 2026, 6:09 PM, embargoed, https://osf.io/j9fvx) |
 | results-frozen-v1 | ce26f33446119a25d162fb529d5872dd9e615702 | 2026-09-27 09:33:42 | Result layer frozen (all results/*.csv formal tables + analysis code); post-freeze changes require a new round per POL-1 |
 
-## Full commit chain (113 commits, 2026-09-25 → present)
+## Full commit chain (115 commits, 2026-09-25 → present)
 
 ```
+e5d5824dfaefc22dd4271a7be976533676c6f40a | 2026-09-30 20:43:27 +0800 | docs: changelog note for Table 1 conventional-layout follow-up
+3f71e72f3402e3814f1dbbf5323967354146e7a4 | 2026-09-30 20:42:34 +0800 | docs: PROVENANCE chain extended
 8dce3412c6b4a51a0a760de4e9c954f418f809f2 | 2026-09-30 20:42:33 +0800 | docs: Table 1 reduced to a conventional dataset summary (CHG-TAB1 follow-up)
 8983bd1a90fbb1b5f75b58a78660db006706aaf0 | 2026-09-30 20:30:00 +0800 | docs: PROVENANCE chain extended to e8e064e
 e8e064ebc57b26792d503b26b5edf62631a2c852 | 2026-09-30 20:29:47 +0800 | docs: de-AI Tables 1-2, apply two pending V6.1 vocabulary items (CHG-TAB1)
