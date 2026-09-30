@@ -78,7 +78,7 @@ def fig1_forest() -> None:
     ax.annotate("nominal 0.90", (0.90, 1.0), xycoords=("data", "axes fraction"),
                 xytext=(2, 3), textcoords="offset points", fontsize=6.5, color="#666666",
                 ha="left")
-    ax.annotate("audit 0.80 (pre-specified)", (0.80, 1.0), xycoords=("data", "axes fraction"),
+    ax.annotate("audit 0.80", (0.80, 1.0), xycoords=("data", "axes fraction"),
                 xytext=(-2, 3), textcoords="offset points", fontsize=6.5, color="#666666",
                 ha="right")
     ax.set_yticks(range(len(groups)))
@@ -87,8 +87,8 @@ def fig1_forest() -> None:
     ax.set_ylim(2.62, -0.62)
     ax.set_xlabel("Coverage on target cohort (Clopper-Pearson 95% CI)")
     ax.set_xlim(0.3, 1.06)
-    ax.scatter([], [], color=C1["lr"], label="LR (primary reference)")
-    ax.scatter([], [], color=C1["lgbm"], label="LGBM (comparator)")
+    ax.scatter([], [], color=C1["lr"], label="LR")
+    ax.scatter([], [], color=C1["lgbm"], label="LGBM")
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=7,
               frameon=False)
     fig.savefig(FIG / "fig1_primary_forest.png")
@@ -118,8 +118,7 @@ def fig2_class_conditional() -> None:
         ax.axhline(0.80, color="#999999", ls=":", lw=0.8)
         ax.set_xticks(xs)
         ax.set_xticklabels([DIR3[d] for d in sub["direction"]], fontsize=7)
-        ax.set_title({"lr": "LR (primary reference)",
-                      "lgbm": "LGBM (comparator)"}[model])
+        ax.set_title({"lr": "LR", "lgbm": "LGBM"}[model])
         ax.set_ylim(0, 1.04)
         ax.tick_params(axis="y", which="minor", left=False)
         if model != "lr":
@@ -161,11 +160,10 @@ def fig3_decoupling() -> None:
             ax.annotate(SHORT.get(name, name), (da, dc), xytext=(dx, dy),
                         textcoords="offset points", fontsize=6.5, ha=ha,
                         color="#444444")
-        ax.set_title({"lr": "LR (primary reference)",
-                      "lgbm": "LGBM (comparator)"}[model])
+        ax.set_title({"lr": "LR", "lgbm": "LGBM"}[model])
         ax.set_xlabel("\u0394AUC vs in-domain reference")
         ax.set_xlim(-0.29, 0.13)
-    axes[0].set_ylabel("\u0394Coverage vs nominal 0.90\n(50-seed mean)")
+    axes[0].set_ylabel("ΔCoverage vs nominal 0.90")
     fig.savefig(FIG / "fig3_decoupling.png")
     plt.close(fig)
 
@@ -201,7 +199,7 @@ def fig4_recovery_cost() -> None:
     ax.axhline(0.90, color="#777777", ls="--", lw=0.8)
     ax.text(-2.5, 0.8975, "nominal 0.90", fontsize=6.5, color="#666666", ha="left",
             va="top")
-    ax.text(0.995, 0.7965, "audit 0.80 (pre-specified)", fontsize=6.5, color="#666666",
+    ax.text(0.995, 0.7965, "audit 0.80", fontsize=6.5, color="#666666",
             transform=ax.get_yaxis_transform(), ha="right", va="top")
     ax.set_xlabel("Target-domain labeled subjects used for recalibration")
     ax.set_ylabel("Overall coverage on held-out\ntarget subjects")
@@ -212,7 +210,7 @@ def fig4_recovery_cost() -> None:
                        mec="black", mew=0.4),
                 Line2D([0], [0], marker="o", ls="none", ms=6, mfc="none",
                        mec="#666666", mew=1.0)]
-    labels_ += ["Weighted CP (0 labels)", r"$\hat{q}\to\infty$ (full set)"]
+    labels_ += ["Weighted CP", r"$\hat{q}\to\infty$ (full set)"]
     ax.legend(handles, labels_, loc="upper right", fontsize=7, frameon=False)
     fig.savefig(FIG / "fig4_recovery_cost.png")
     plt.close(fig)
@@ -232,7 +230,7 @@ def fig5_weighted_cp_tradeoff() -> None:
         ax.bar(x - w / 2, [m[key] for m in naive], w, color="#CFCFCF",
                edgecolor="#999999", lw=0.5, label="Naive split CP")
         ax.bar(x + w / 2, [m[key] for m in wcp], w, color=C5_W,
-               edgecolor="white", lw=0.5, label="Weighted CP (0 labels)")
+               edgecolor="white", lw=0.5, label="Weighted CP")
         ax.set_xticks(x, labels, fontsize=7)
         ax.set_ylabel(ylab)
         ax.set_ylim(0, 1.09)
@@ -247,7 +245,7 @@ def fig5_weighted_cp_tradeoff() -> None:
     handles, labels_ = axes[0].get_legend_handles_labels()
     handles += [Line2D([0], [0], color="#777777", ls="--", lw=0.8),
                 Line2D([0], [0], color="#999999", ls=":", lw=0.9)]
-    labels_ += ["nominal 0.90", "audit 0.80 (pre-specified)"]
+    labels_ += ["nominal 0.90", "audit 0.80"]
     fig.legend(handles, labels_, loc="outside upper center", ncols=4, fontsize=6.5,
                frameon=False)
     fig.savefig(FIG / "fig5_weighted_cp_tradeoff.png")
@@ -288,10 +286,10 @@ def fig6_stress_tests() -> None:
                       markeredgecolor="white") for hue, ls in C6.values()]
     proxies.append(Line2D([0], [0], marker="D", ls="none", markersize=4.5,
                           markerfacecolor="#D9D9D9", markeredgecolor="#999999"))
-    fig.legend(proxies, [arm_label[a] for a in C6] + ["baseline (no corruption)"],
+    fig.legend(proxies, [arm_label[a] for a in C6] + ["Baseline"],
                loc="outside upper center", ncols=4, fontsize=7, frameon=False)
-    ax_a.set_title("A  Calibration-only flip (theory-aligned)")
-    ax_b.set_title("B  Train+calibration flip (deployment)")
+    ax_a.set_title("A  Calibration-only flip")
+    ax_b.set_title("B  Train+calibration flip")
     obs = ta[ta["arm"] == "baseline"].iloc[0]
     groups = [("Observed", None, None),
               ("Prevalence re-matching", "resample_only", None),
@@ -326,8 +324,7 @@ def fig6_stress_tests() -> None:
     ax_c.set_xticks(x, [g[0] for g in groups], fontsize=7)
     ax_c.set_ylim(0, 1.09)
     ax_c.set_ylabel("Class-conditional coverage")
-    ax_c.set_xlabel("C  Three-arm real-transfer test (shaded = pre-specified \u00b15 pp "
-                    "practical-equivalence tolerance; not a CI)", fontsize=7.5)
+    ax_c.set_xlabel("C  Three-arm real-transfer test", fontsize=7.5)
     ax_c.legend(loc="upper left", fontsize=6.5, frameon=False)
     fig.savefig(FIG / "fig6_stress_tests.png")
     plt.close(fig)

@@ -154,3 +154,10 @@
 - **审计**：documents:visual-judge 逐像素对冻结 CSV（fig1 k/n、fig7 十二格、fig6 四组柱、fig4 五点全对）。终态 fig1/2/4/5/6/7 PASS；fig3 数据修正+标签修复裁片核验。
 - **docx**：六图媒体替换（rId35–50 哈希定位）；fig5/fig6 显示纵横比同步（5.83×2.51 / 5.83×7.13 in）；**Fig. 6 图注板次错位修正**（原"A:左仅校准/右训练+校准。B:三臂"与图内 A/B/C 标题错一代稿时期，EN+ZH 同步改为 A=仅校准、B=训练+校准、C=三臂）；fig4 图注补星标让位说明（EN+ZH）。
 - 本地 04edb4b（图+脚本）+ e31bfed（docx）；PROVENANCE 链续至 e31bfed；公开仓库同步。
+
+## CHG-FIG14 ｜ 去 AI 味：图内文字只留系列标识（2026-09-30，用户指令"查七图哪里像AI的痕迹"）
+
+- 原则：图例/标注只说"这是什么系列"，解释与防御性限定全归图注；逐条核对删减信息已在现有图注中，零图注改动。
+- 删除清单：①"(pre-specified)"（fig1/fig4 阈值标注、fig5 图例 → "audit 0.80"）；②fig6 面板标题 "(theory-aligned)"/"(deployment)" 与 C 面板 xlabel 长串括注 → "C Three-arm real-transfer test"；③角色括注 "LR (primary reference)"/"LGBM (comparator)" → "LR"/"LGBM"（fig1 图例 + fig2/fig3 面板标题）；④fig6 "baseline (no corruption)" → "Baseline"；⑤"Weighted CP (0 labels)" → "Weighted CP"（fig4/fig5 图例）；⑥fig3 ylabel "(50-seed mean)"。fig7 色条 "(50 seeds)" 保留（事实性均值说明）。
+- 数据/几何/版式零改动，七 PNG 像素尺寸与 CHG-FIG13 完全一致（extent 无需动）。
+- 换图目标改为 **V6.0 EN+ZH**（fig7 已入正文，rId34–52 七图哈希映射重做）；两 docx 同时首次入库（V6.0 文字为写作窗口 09-29 版）。本地 532f781 + 499316f；公开仓库同步。
