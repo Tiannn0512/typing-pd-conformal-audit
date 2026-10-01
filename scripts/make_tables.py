@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""make_tables.py — 论文表格定稿（TODO-5.1）
+"""make_tables.py — 论文表格定稿
 
 冻结来源：全部单元格由 results/*.csv 程序化派生（零手抄数字——审计门要求图表
 数字与 results/ 一致）。输出 results/paper_tables/table1..6.csv（写作期直接引用）。

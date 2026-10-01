@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """subgroup_audit.py — 分组条件覆盖审计（TODO-4.9，描述性；plan §14 砍线序第二位）
 
-冻结口径：--strata sex,age_median；描述性；MIT 性别失衡显式报告（TODO 台账）。
+冻结口径：--strata sex,age_median；描述性；MIT 性别失衡显式报告。
 定位：测量真实覆盖的分层分布，供 limitations 与讨论引用——**边际 CP 保证不延伸
 到组条件覆盖（Rafe 2026 陷阱，预注册引用），本审计是观察报告而非保证核查**；
 无三分类/Holm/判定机制。

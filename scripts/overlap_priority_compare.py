@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""overlap_priority_compare.py — 三分类重叠区两种归属的对照模拟（用户指令：拍板前入账）
+"""overlap_priority_compare.py — 三分类重叠区两种归属的对照模拟
 
-背景：三分类规则的 {lo≥0.80 且 hi<0.90} 重叠区归属在冻结文本中欠定义（TODO-3.3 审核发现）。
+背景：三分类规则的 {lo≥0.80 且 hi<0.90} 重叠区归属在冻结文本中欠定义（审核发现）。
 两种读法：
   Incompatible 优先（现行实现 classify()）：hi < 0.90 → Incompatible；否则 lo ≥ 0.80 → Compatible；否则 Undetermined
   Compatible 优先（条文顺序读法）：lo ≥ 0.80 → Compatible；否则 hi < 0.90 → Incompatible；否则 Undetermined
 本脚本在同一模拟链路（Binomial → CP CI → 两种优先级分类）下输出 16 cells × 两口径的
-判定概率对照，作为重叠区归属拍板的入账证据（拍板：Incompatible 优先，2026-09-26 用户批准）。
+判定概率对照，作为重叠区归属拍板的入账证据（决定：Incompatible 优先，2026-09-26 批准）。
 """
 from __future__ import annotations
 

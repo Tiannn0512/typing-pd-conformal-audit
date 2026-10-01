@@ -4,7 +4,7 @@
 版式规范（scientific-visualization skill）：
 - 物理尺寸统一：双栏宽 7.2 in（183 mm），constrained_layout，不用 bbox_inches="tight"；
 - 600 DPI 导出；Arial；白底；去 top/right spine；
-- 每图一套独立但同一饱和度家族的配色（用户要求：不同 fig 尽量不同套）：
+- 每图一套独立但同一饱和度家族的配色：
     fig1 森林图   LR #315A86 / LGBM #B86F83（锚定蓝-玫瑰对）
     fig2 类条件   PD #B85C5C / HC #587A9E（暖-冷类对，与 fig6C 类色一致）
     fig3 解耦图   LR #3E8474 / LGBM #8E6C9E（青-梅对）
@@ -13,7 +13,7 @@
     fig6 压力测试 arms PD→HC #8E6C9E / HC→PD #C28A3A / symmetric #587A9E；类色同 fig2
     fig7 热图     发散 #B86F83→#D7B4B8→#F2F0EA→#9AAEC2→#315A86（0.4–1.0 定标）
 - 参考线统一：0.90 名义 #777777 虚线 / 0.80 预注册审计阈值 #999999 点线；
-- 标签避让：图例一律出数据区，逐一目检。
+- 标签避让：图例一律出数据区。
 冻结来源不变：全部数字只读自 results/*.csv。
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator
 
 FIG = Path("figures")
-AUC_REF = {"lr": 0.7868, "lgbm": 0.7257}  # CHG-P1 冻结库内参照
+AUC_REF = {"lr": 0.7868, "lgbm": 0.7257}  # 冻结结果层库内参照
 C1 = {"lr": "#315A86", "lgbm": "#B86F83"}                       # fig1
 C2 = {"pd": "#B85C5C", "hc": "#587A9E"}                         # fig2 / fig6C
 C3 = {"lr": "#3E8474", "lgbm": "#8E6C9E"}                       # fig3
@@ -273,7 +273,7 @@ def fig6_stress_tests() -> None:
         ax.scatter([0], [base], marker="D", s=22, facecolor="#D9D9D9",
                    edgecolor="#999999", linewidths=0.6, zorder=5)
         ax.axhline(0.90, color="#777777", ls="--", lw=0.8)
-        ax.set_xlabel("Flip dose (% of donor class)")
+        ax.set_xlabel("Label-flip dose (% of the flipped class)")
         ax.set_xlim(-2, 32)
         ax.set_xticks([0, 10, 20, 30])
         ax.set_ylim(0.79, 1.01)

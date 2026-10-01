@@ -1,5 +1,5 @@
 # key_hand_mapping.yaml — MIT/OE 键位→手别映射表（W4 预注册版本化附件，TODO-3.4 前置①）
-# 版本：1.0.0 ｜ 冻结：2026-09-26（用户拍板：标准指法分区 + 空格/特殊键不硬归属 +
+# 版本：1.0.0 ｜ 冻结：2026-09-26（定案：标准指法分区 + 空格/特殊键不硬归属 +
 #        OE 上档字符按基准键手别 + 不可映射键剔除计数）｜ 效力：本文件一经 commit 即冻结，
 #        此后 L2 手别特征方可产出（feature_tiers.yaml W4 警示解除条件）；任何修改 = 新版本号
 #        + 变更记录 + 预注册更新。
@@ -7,7 +7,7 @@
 #        normalize 规则）与 OE（key 列小写）。Tappy 用原生手别列（不经本表）；TyPD 无 L2。
 
 version: "1.0.1"
-frozen_at: "2026-09-26"  # v1.0.1 增补同日（用户批准），变更见 usage_notes/v1.0.1 条目
+frozen_at: "2026-09-26"  # v1.0.1 增补同日（2026-09-26 批准），变更见 usage_notes/v1.0.1 条目
 scheme: "标准美式 QWERTY 触键指法分区（standard touch-typing finger zones）"
 
 normalize_rules:
@@ -141,4 +141,4 @@ usage_notes:
   - "MIT 首行 Shift_L 等长 meta 键已被官方 autoFilt 剔除，本表 unassigned 为兜底"
   - "匹配优先级：unassigned 精确/前缀匹配 > aliases 归一化 > shifted_base_map > hand_zones 精确匹配 > NA"
   - "v1.0.1 变更记录：增补 MIT X11 keysym 别名 10 项 + OE 空格/导航/死键 unassigned 17 项
-    （复发猎杀 B/发现3：keysym 形态占 MIT unmatched 61%，本为可映射物理键——用户批准 2026-09-26）"
+    （复发猎杀 B/发现3：keysym 形态占 MIT unmatched 61%，本为可映射物理键——2026-09-26 批准）"

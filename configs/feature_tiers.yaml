@@ -21,7 +21,7 @@ tiers:
 # 无 hand*/char*/key 列（2026-09-25 实测通过，见 data/interim/parse_reports/schema_validation.json）
 # ✅ MIT/OE 的手别口径已冻结（2026-09-26）：configs/key_hand_mapping.yaml v1.0.1
 #   （标准指法分区；空格/特殊键不硬归属；OE 上档按基准键；不可映射剔除计数）——
-#   版本化附件入 W4 预注册；L2 层自冻结起可产出分析数字（先冻结后产出，用户指令）
+#   版本化附件入 W4 预注册；L2 层自冻结起可产出分析数字（先冻结后产出）
 dataset_max_tier:
   mit: 3     # 冻结协议 §2 转录；L2/L3 口径已冻结（key_hand_mapping.yaml v1.0.1）
   tappy: 2   # 系统级钩子：原生左右手列，无字符身份（v1.3.2 三信号最小集）——L2 无口径缺口
@@ -63,7 +63,7 @@ changelog:
            9,662,212 行）——与冻结 digraph_pool 定义及 'L2 = L1 +' 语义一致；修复复发猎杀 B/MEDIUM-2
            的未登记口径缺口（keep 池与 L1 基差 34-37% 事件）。同时 FEATURE-DEF-1 的 L3 双手检查
            修复落地（char_from 与 char_to 双方 ∈ {L,R}）；映射表升 v1.0.1（X11 keysym 别名 +
-           OE 空格变体归 unassigned）。三项均用户批准（2026-09-26）；L2/L3 方向矩阵与
+           OE 空格变体归 unassigned）。三项均经批准（2026-09-26）；L2/L3 方向矩阵与
            tappy2mit 主结果数字相应更新，判定结论不变"
   - id: FEATURE-DEF-1
     date: "2026-09-26"
@@ -71,4 +71,4 @@ changelog:
 
   - id: DEC-T1
     date: "2026-09-26"
-    note: "迁移矩阵 LGBM 对照列（CHG-P1 对照模型）参数规则：min_child_samples = max(1, floor(n_train/4))（按各方向实际训练折规模锁定，非搜索）；max_depth=3；n_estimators 默认。对照状态披露：LGBM 列仅作 0.85 锚点偏离的模型差异参照，主判定/主参照不变（LR）。gate 偏离决策：矩阵按预注册特征集原样入账（选项 1+3，用户批准）；LGBM 对照含完整六元组（用户指令）"
+    note: "迁移矩阵 LGBM 对照列（对照模型）参数规则：min_child_samples = max(1, floor(n_train/4))（按各方向实际训练折规模锁定，非搜索）；max_depth=3；n_estimators 默认。对照状态披露：LGBM 列仅作 0.85 锚点偏离的模型差异参照，主判定/主参照不变（LR）。gate 偏离决策：矩阵按预注册特征集原样入账（选项 1+3，2026-09-26 批准）；LGBM 对照含完整六元组"

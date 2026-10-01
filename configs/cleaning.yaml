@@ -79,12 +79,12 @@ change_log:
     reason: "trial 为同一次实验室访视内的连续抄写块（40-115 字符/块），按 trial 评估 <100 有效
              digraph 规则将结构性摧毁金标准库（33 人仅剩 7 人存活：valid<100 剔 295/338 trial（flight 后口径，2026-09-26 审核复算勘误）；
              冻结协议原文未定义 TyPD session 粒度，此为实现口径澄清而非规则修改"
-    approval: "用户拍板（AskUserQuestion 选项 A，2026-09-26）"
+    approval: "定案（选项 A，2026-09-26）"
     effect: "digraph 派生口径不变（仍在 trial 内，无跨 trial 二连键）；仅 session 级规则
              （rate≥20 字/分、有效 digraph≥100）的评估单位升为访视"
 deferred_decisions:
   - id: DEF-1
     item: "OE 精确重复事件行（participating=2,063 / redundant=1,203，占 keep 行 0.27%）是否去重"
-    status: "**定案（2026-09-26 用户批准）：保留原样（不去重）** + 论文 limitations 披露。
+    status: "**定案（2026-09-26 批准）：保留原样（不去重）** + 论文 limitations 披露。
              理由：占比 0.27% 且此时去重属结果后决策；保留为唯一不受结果左右的选项。"
     deadline: "已定案（原 deadline W4 前提前完成）"
