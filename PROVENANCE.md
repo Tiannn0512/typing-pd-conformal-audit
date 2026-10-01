@@ -18,9 +18,11 @@ governance tags are called out explicitly.
 | v1.0-prereg | 6459a9ec9a88b4039008ceff83500c0900d33c57 | 2026-09-26 17:15:36 | Frozen analysis plan, pre-registered on OSF before any cross-dataset coverage was computed (OSF registration Sep 26, 2026, 6:09 PM, embargoed, https://osf.io/j9fvx) |
 | results-frozen-v1 | ce26f33446119a25d162fb529d5872dd9e615702 | 2026-09-27 09:33:42 | Result layer frozen (all results/*.csv formal tables + analysis code); post-freeze changes require a new round per POL-1 |
 
-## Full commit chain (118 commits, 2026-09-25 → present)
+## Full commit chain (120 commits, 2026-09-25 → present)
 
 ```
+df1afcdd06f9852698e0092a2e89f2f91fec90b0 | 2026-10-02 00:03:19 +0800 | docs: restore in-manuscript AI-use disclosure (CHG-AI1)
+70fee3bcab915217c5b8534c62c35780621fc02f | 2026-10-01 23:48:42 +0800 | docs: changelog CHG-PUB4 + PROVENANCE chain extended
 bfe6428079e9f9696ab221a24221fae5917daaff | 2026-10-01 23:48:25 +0800 | chore: neutralize internal decision-narration in code comments and configs (CHG-PUB4)
 b416bd78bfcef4a23cad87a61853b18a4b4d2d5c | 2026-10-01 23:48:25 +0800 | docs: final governance-vocabulary pass over V6.0 main text (CHG-PUB4)
 afdadb2239842e810bb80ebd7a4f64d315df7581 | 2026-09-30 20:43:28 +0800 | docs: PROVENANCE chain extended
