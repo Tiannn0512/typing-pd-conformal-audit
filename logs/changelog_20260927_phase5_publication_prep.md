@@ -181,3 +181,10 @@
 - ZH 表 1 表注引号错字修正：下表”主家族” → “主家族”；EN/ZH 表注删 "below/下表"（自指冗余）。
 - 表注其余注册术语（α=0.10、Holm、confirmatory seed、判定词、±容差）按精度纪律不动。数字零改动。
 - **表 1 常规化重构（用户："这角色列没在别的论文见过"）**：Role 列把标签来源与方向角色两件事压在一列（V4.0 一致性修复的产物）。现拆出 Labels/标签 列（Clinical/自报，与方向名对齐），方向角色信息撤出表格——Methods 正文已完整交代三个主方向与合并池构成（EN/ZH 均核验），表注改一句指向 Methods；表头 Eligible/入组 → Subjects/人数。表格变为常规数据集汇总表，信息零损失。附带一致性修正：Data Availability 段 frozen/fixed cohort 措辞 EN↔ZH 对齐（ZH 因全词匹配先行命中，EN 同句补齐）；正文其余 "冻结队列/临床金标准" 残留（摘要/贡献/结果）属 V6.1 待并清单，本轮不动。
+
+## CHG-PUB4 ｜ 终轮 AI 痕迹全面审查（正文 + GitHub 全部内容 + OSF 注册件）（2026-09-30，用户指令）
+
+- **正文（V6.0 EN+ZH，旧 Methods 块 p14–24 除外——V6.1 合并时被 Methods(V4) 整体替换且 V4 已修完）**：摘要 frozen cohort→cohort、high-power→confirmatory、safety→failure-mode diagnostic（EN 5 处/ZH 9 处，即 V6.1 待并清单四项落实）；ZH 独有漂移修正（Limitations 修正冻结于→定稿于、Results 冻结队列→固定队列、图 2 图注）。保留：pre-registered/pre-specified（试验规范用语）、verdict/audit label（注册术语且句内定义）、Code Availability "frozen result tables"（与 results-frozen-v1 标签绑定）。**新发现：EN 摘要 255 词 > JOMS 上限 250**（叙事重写后超），待摘要轮压缩。
+- **代码/configs（行为零改动，py_compile+yaml parse 过）**：用户拍板/用户批准/用户指令/AskUserQuestion → 批准/定案+日期（决策事实保留）；见台账记录/TODO 台账/TODO-N/CHG-P1 台账指针全清（修订记录永久锚在 OSF 注册正文与冻结文档）；build_tables 台账→记录表；make_figures 头注去用户叙述。涉及 4 scripts + 4 src + 4 configs。
+- **不可改清单（只审不改）**：OSF 注册件 osf_upload/analysis_plan_v1.0.1_PREREG.md（含 TODO-3.x/CHG-P1/用户批准——已带 OSF 时间戳，改动=预注册完整性问题）；01_研究计划/ 全部冻结版；docs/analysis_plan_*；PROVENANCE.md（逐字 commit 公证链）；README AI 披露句；results/ 冻结表与 mapie/qc 验证报告。
+- 本地 b416bd7（正文）+ bfe6428（代码）+ 本条 changelog；公开仓库同步。
