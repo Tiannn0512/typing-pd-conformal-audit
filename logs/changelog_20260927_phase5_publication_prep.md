@@ -188,3 +188,10 @@
 - **代码/configs（行为零改动，py_compile+yaml parse 过）**：用户拍板/用户批准/用户指令/AskUserQuestion → 批准/定案+日期（决策事实保留）；见台账记录/TODO 台账/TODO-N/CHG-P1 台账指针全清（修订记录永久锚在 OSF 注册正文与冻结文档）；build_tables 台账→记录表；make_figures 头注去用户叙述。涉及 4 scripts + 4 src + 4 configs。
 - **不可改清单（只审不改）**：OSF 注册件 osf_upload/analysis_plan_v1.0.1_PREREG.md（含 TODO-3.x/CHG-P1/用户批准——已带 OSF 时间戳，改动=预注册完整性问题）；01_研究计划/ 全部冻结版；docs/analysis_plan_*；PROVENANCE.md（逐字 commit 公证链）；README AI 披露句；results/ 冻结表与 mapie/qc 验证报告。
 - 本地 b416bd7（正文）+ bfe6428（代码）+ 本条 changelog；公开仓库同步。
+
+## CHG-AI1 ｜ V6.0 恢复稿内 AI 披露（2026-10-01，用户首肯；推翻 V5.1 的删除决定）
+
+- 背景：用户担心审稿人从公开仓库看出"全过程 AI 完成"。评估结论：仓库披露句+提交记录已公开且不可回撤，唯一薄弱点是稿件本体无披露（V5.1 删除后仅靠投稿问卷）——稿内/仓库/问卷三方口径不一致观感最差；ICMJE/Springer 建议 cover letter + 稿内双披露。
+- 实现：V6.0 EN+ZH Declarations 节内（Ethics Approval 前）新增 "Use of AI-Assisted Tools"/"AI 辅助工具使用" 小节，一句事实性声明（用户任务书给定措辞：LLM-based tools for code and drafting assistance under the author's direction; author takes full responsibility）+ 公开存档指向 Code Availability。
+- 同步决定：README 不加"提交信息≠研究记录"框架句（用户裁定不加）。
+- 提醒：JOMS 投稿问卷与 cover letter 的 AI 披露照旧勾选；公开仓库披露句保持原样。
