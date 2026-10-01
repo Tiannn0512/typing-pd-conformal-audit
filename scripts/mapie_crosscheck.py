@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""mapie_crosscheck.py — 本项目 split conformal 实现 vs MAPIE 官方库对拍（TODO-3.1 一次性验证）
+"""mapie_crosscheck.py — 本项目 split conformal 实现 vs MAPIE 官方库对拍（一次性验证）
 
 同一合成数据、同一模型（逻辑回归）、同一校准/测试切分下：
   本实现（src/cp/conformal.py，score = 1 − 真类概率，k = ceil((n+1)(1−α)) 有限样本校正）
@@ -64,7 +64,7 @@ def main() -> None:
     avg_mapie = float(np.mean([len(s) for s in sets_mapie]))
 
     lines = [
-        "# MAPIE 对拍报告（TODO-3.1 一次性验证）",
+        "# MAPIE 对拍报告（一次性验证）",
         "",
         f"**生成**：2026-09-26 ｜ **实现**：src/cp/conformal.py ｜ **对照**：MAPIE 1.5.0 "
         f"SplitConformalClassifier(conformity_score='lac', prefit=True)",

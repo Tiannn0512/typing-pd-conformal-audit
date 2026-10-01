@@ -14,7 +14,7 @@
      / OE H&Y0 规则不可操作化记录（公开数据无该字段）
 
 输出：
-  data/processed/sessions.parquet   session 级台账（每 session 的规则结果）
+  data/processed/sessions.parquet   session 级记录表（每 session 的规则结果）
   data/processed/subjects.csv       分析就绪 person 表（L1 特征四库 + Tappy 原生 L2 + 标签 + QC 计数）
   results/cohort_flow.csv           冻结队列表（全项目唯一权威样本数口径）
   data/interim/parse_reports/build_tables_report.json  运行报告 + gate 检查
@@ -97,7 +97,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
 
 
 def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """返回 (存活 digraph DataFrame, session 台账 DataFrame)。flow 原地追加队列表行。"""
+    """返回 (存活 digraph DataFrame, session 记录表 DataFrame)。flow 原地追加队列表行。"""
     df = pd.read_parquet(EVENTS[dataset])
     press = PRESS_COL[dataset]
     n_raw_events = len(df)

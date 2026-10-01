@@ -52,7 +52,7 @@ change_log:
              零分裂 → 单叶常数先验 → 50 seeds AUC 恒 0.5000（LR 0.7868 正常在带内）。
              官方默认为大数据调校，n=32 不可用。"
     rule: "最小偏离默认值原则：取允许 ≥1 次分裂的最小改动（32/2=16 ≥ 10 → 1 层 2 叶），
-           参数由规则锁定而非结果试出；登记先于重跑（用户批准：选 A 方案）"
+           参数由规则锁定而非结果试出；登记先于重跑（选 A 方案，批准留档）"
     first_run_evidence: "commit 30dadcd（results/baseline_mit.csv 首版 LGBM 全 0.5）"
 
   - id: DEC-B3b
@@ -62,13 +62,13 @@ change_log:
              '调参仅源域内部'授权 val 折模型选择。test 集从未参与任何选择，一次性评估有效性完好。"
     rule: "预声明网格（非结果试出）；逐 seed 按 val AUC 选择，平局取声明序（mcs 升序、depth 升序）；
            test 对选中配置只评一次；选择分布入报告；limitations 披露'修正由 gate 失败触发'；
-           用户批准（选项 1，2026-09-26）"
+           批准（选项 1，2026-09-26）"
     first_run_evidence: "commit 30dadcd（B3 退化）；第二轮运行记录（B3a = 0.7067 FAIL）"
 
 archival_policy:
   id: POL-1
   date: "2026-09-26"
-  rule: "轮次留档、不无痕覆盖（用户指令 2026-09-26）：正式结果文件每次运行必须同时落
+  rule: "轮次留档、不无痕覆盖（2026-09-26 定案）：正式结果文件每次运行必须同时落
          results/<name>_run<N>_<决策标签>.csv 轮次档案并随轮次 commit；对已入库结果文件
          的任何覆盖必须先 commit 前态。事故记录：TODO-3.2 第二轮（DEC-B3a 0.7067）曾被
          无 commit 覆盖，已以确定性重生成补档（run2 与记录值逐位核验一致）。"
