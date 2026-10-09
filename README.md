@@ -108,6 +108,8 @@ Result-table mapping: `results/primary_family.csv` → manuscript Table 2,
 - Results were frozen at commit `ce26f33` (2026-09-27), tag
   `results-frozen-v1`. Later changes are append-only, recorded in
   `docs/PROVENANCE.md` and `docs/changelogs/`.
+- This branch carries a single release commit; the full development history
+  (both governance tags) is preserved on the `archive/dev-history` branch.
 - The primary model was switched from LightGBM to logistic regression by a
   registered amendment (CHG-P1) after LightGBM failed the pre-specified
   acceptance gate (MIT in-domain, 50 seeds, AUC within 0.75-0.91); the three
