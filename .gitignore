@@ -47,13 +47,8 @@ reports/_AI_style_audit_*.md
 reports/_methods_code_audit_*.md
 reports/_assets/
 reports/_assets_zh/
-# reports/ 默认忽略，下列例外逐项放行（现行权威 + 治理文档）
+# reports/ 默认忽略，仅放行补充材料表（手稿不入库，随投稿包走）
 reports/*
-!reports/Typing_PD(V7.0)_zh.docx
-!reports/methods（V2）.docx
-!reports/results（V2）.docx
-!reports/discussion（V4）.docx
-!reports/conclusion（V1）.docx
 !reports/Supplementary_Table_S1_cleaning_attrition.docx
 !reports/Supplementary_Table_S2_coverage_matrix.docx
 !reports/Supplementary_Table_S3_power_analysis.docx
