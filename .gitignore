@@ -29,3 +29,32 @@ zenodo_upload/
 reports/manuscript_front_draft_v0.1*
 reports/paper_skeleton_guide_v0.1*
 .zcodeignore
+
+# Office 锁文件
+~$*
+
+# Office 锁文件
+~$*
+
+# ---- 边界（2026-10-08 整理，白名单式：reports/ 只追踪现行权威）----
+# 参考文献 PDF（版权物）；手稿过程版本、临时审计稿、投稿包、导出 PDF 不入库
+04_关键文献/*.pdf
+*.pdf
+提交_正文/
+提交_补充材料/
+reports/_tmp_*
+reports/_AI_style_audit_*.md
+reports/_methods_code_audit_*.md
+reports/_assets/
+reports/_assets_zh/
+# reports/ 默认忽略，下列例外逐项放行（现行权威 + 治理文档）
+reports/*
+!reports/Typing_PD(V7.0)_zh.docx
+!reports/methods（V2）.docx
+!reports/results（V2）.docx
+!reports/discussion（V4）.docx
+!reports/conclusion（V1）.docx
+!reports/Supplementary_Table_S1_cleaning_attrition.docx
+!reports/Supplementary_Table_S2_coverage_matrix.docx
+!reports/Supplementary_Table_S3_power_analysis.docx
+!reports/_修订任务清单.md

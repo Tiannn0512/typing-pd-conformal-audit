@@ -2,7 +2,7 @@
 
 **A pre-registered, four-dataset audit of split-conformal prediction coverage under cross-dataset deployment of keystroke-based Parkinson's disease (PD) classifiers.**
 
-Manuscript: `reports/Typing_PD(V6.0).docx` (English; Chinese version `reports/Typing_PD(V6.0)_zh.docx`) — in preparation for submission to *Journal of Medical Systems*.
+Manuscript: `reports/Typing_PD(V7.0)_zh.docx` (Chinese; English version in preparation) — submission target *Journal of Medical Systems*. Frozen section texts live in `reports/methods（V2）.docx`, `reports/results（V2）.docx`, and `reports/discussion（V4）.docx`.
 
 ## Purpose of this repository
 
@@ -36,7 +36,7 @@ scripts/                figure and paper-table generation (derive all numbers fr
 results/                frozen aggregate result tables (CSV; no subject-level data)
 results/paper_tables/   camera-ready tables derived programmatically from frozen results
 figures/                publication figures (600 dpi, no in-image titles)
-reports/                manuscript (Typing_PD(V6.0).docx; _zh = Chinese version)
+reports/                manuscript and part-level documents (frozen section texts)
 tests/                  unit tests incl. conformal implementation cross-checks (MAPIE 1.5.0)
 ```
 
@@ -54,6 +54,7 @@ The frozen cohort construction with step-by-step inclusion/exclusion counts is d
 ## Reproducibility
 
 - Python stack pinned in `requirements.txt` (LightGBM 4.7.0, MAPIE 1.5.0, scikit-learn 1.9.1, pandas 3.0.6, numpy 2.5.3).
+- `python run_all.py` prints the full pipeline plan (parsing → QC → features → cohort → baseline gate → transfer → conformal audit → remediation → calibration comparison → stress tests → BBSE → sensitivity → subgroups → power → tables/figures); `python run_all.py --run` reruns it end-to-end, stopping at the first failing stage. Regenerated outputs must be diffed against the frozen layer in `results/` before replacing it.
 - Every figure (`scripts/make_figures.py`) and every paper table (`scripts/make_tables.py`) is derived programmatically from the frozen CSVs — no hand-copied numbers.
 - The split-CP implementation is verified pointwise against MAPIE 1.5.0 (1800/1800 cells) and passes the unit-test suite in `tests/`.
 
@@ -63,4 +64,4 @@ AI agent assistance (ZCode CLI accessing GLM models via API) was used under huma
 
 ## License & contact
 
-© 2026 the author. Contents are provided for timestamping, transparency, and peer review; reuse requires permission until a license is finalized with the published article. Contact: [corresponding author e-mail — see manuscript title page].
+Code and documentation are released under the MIT License (`LICENSE`). The four source datasets keep their own licenses and are not redistributed here (see Data availability). Contact: [corresponding author e-mail — see manuscript title page].

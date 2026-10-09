@@ -5,13 +5,14 @@
 - 物理尺寸统一：双栏宽 7.2 in（183 mm），constrained_layout，不用 bbox_inches="tight"；
 - 600 DPI 导出；Arial；白底；去 top/right spine；
 - 每图一套独立但同一饱和度家族的配色：
+    图号按正文首次出现顺序（2026-10-08 重编）：
     fig1 森林图   LR #315A86 / LGBM #B86F83（锚定蓝-玫瑰对）
-    fig2 类条件   PD #B85C5C / HC #587A9E（暖-冷类对，与 fig6C 类色一致）
+    fig2 热图     发散 #B86F83→#D7B4B8→#F2F0EA→#9AAEC2→#315A86（0.4–1.0 定标）
     fig3 解耦图   LR #3E8474 / LGBM #8E6C9E（青-梅对）
-    fig4 恢复曲线 T→M #C28A3A / M→T #315A86 / C→S #8E6C9E
-    fig5 权衡柱   naive #CFCFCF 灰 / weighted #3E8474 青
-    fig6 压力测试 arms PD→HC #8E6C9E / HC→PD #C28A3A / symmetric #587A9E；类色同 fig2
-    fig7 热图     发散 #B86F83→#D7B4B8→#F2F0EA→#9AAEC2→#315A86（0.4–1.0 定标）
+    fig4 类条件   PD #B85C5C / HC #587A9E（暖-冷类对，与 fig7C 类色一致）
+    fig5 恢复曲线 T→M #C28A3A / M→T #315A86 / C→S #8E6C9E
+    fig6 权衡柱   naive #CFCFCF 灰 / weighted #3E8474 青
+    fig7 压力测试 arms PD→HC #8E6C9E / HC→PD #C28A3A / symmetric #587A9E；类色同 fig4
 - 参考线统一：0.90 名义 #777777 虚线 / 0.80 预注册审计阈值 #999999 点线；
 - 标签避让：图例一律出数据区。
 冻结来源不变：全部数字只读自 results/*.csv。
@@ -125,7 +126,7 @@ def fig2_class_conditional() -> None:
             ax.tick_params(axis="y", which="major", left=False)
     axes[0].set_ylabel("Class-conditional coverage")
     axes[1].legend(loc="lower right", fontsize=7, frameon=False)
-    fig.savefig(FIG / "fig2_class_conditional.png")
+    fig.savefig(FIG / "fig4_class_conditional.png")
     plt.close(fig)
 
 
@@ -212,7 +213,7 @@ def fig4_recovery_cost() -> None:
                        mec="#666666", mew=1.0)]
     labels_ += ["Weighted CP", r"$\hat{q}\to\infty$ (full set)"]
     ax.legend(handles, labels_, loc="upper right", fontsize=7, frameon=False)
-    fig.savefig(FIG / "fig4_recovery_cost.png")
+    fig.savefig(FIG / "fig5_recovery_cost.png")
     plt.close(fig)
 
 
@@ -248,11 +249,12 @@ def fig5_weighted_cp_tradeoff() -> None:
     labels_ += ["nominal 0.90", "audit 0.80"]
     fig.legend(handles, labels_, loc="outside upper center", ncols=4, fontsize=6.5,
                frameon=False)
-    fig.savefig(FIG / "fig5_weighted_cp_tradeoff.png")
+    fig.savefig(FIG / "fig6_weighted_cp_tradeoff.png")
     plt.close(fig)
 
 
 def fig6_stress_tests() -> None:
+    # 2026-10-08: A/B 改为 PD/HC 条件覆盖（原总体覆盖与正文剂量-反应声明错位）
     st = pd.read_csv("results/stress_test_a.csv")
     ta = pd.read_csv("results/three_arm_stress_test.csv")
     fig = plt.figure(figsize=(7.2, 8.8), layout="constrained")
@@ -262,32 +264,41 @@ def fig6_stress_tests() -> None:
     ax_c = fig.add_subplot(gs[1, :])
     arm_label = {"PD2HC": "PD\u2192HC flip", "HC2PD": "HC\u2192PD flip",
                  "symmetric": "Symmetric flips"}
-    base = st[(st["arm"] == "none")]["coverage"].iloc[0]
-    for arm, (hue, ls) in C6.items():
+    base_row = st[(st["arm"] == "none")].iloc[0]
+    base = {"cpc_hc": float(base_row["cpc_hc"]), "cpc_pd": float(base_row["cpc_pd"])}
+    cls_style = {"cpc_hc": ("-", "o"), "cpc_pd": ("--", "s")}  # 实线=HC 条件,虚线=PD 条件
+    for arm, (hue, _ls) in C6.items():
         for ax, scope in ((ax_a, "cal_only"), (ax_b, "train_cal")):
             sub = st[(st["arm"] == arm) & (st["scope"] == scope)].sort_values("dose_pct")
-            ys = [base] + sub["coverage"].tolist()
-            ax.plot([0] + sub["dose_pct"].tolist(), ys, ls, marker="o", color=hue,
-                    ms=4, lw=1.2, markeredgecolor="white", markeredgewidth=0.6)
+            for col, (ls, mk) in cls_style.items():
+                ys = [base[col]] + sub[col].tolist()
+                ax.plot([0] + sub["dose_pct"].tolist(), ys, ls, marker=mk, color=hue,
+                        ms=3.6, lw=1.1, markeredgecolor="white", markeredgewidth=0.5)
     for ax in (ax_a, ax_b):
-        ax.scatter([0], [base], marker="D", s=22, facecolor="#D9D9D9",
-                   edgecolor="#999999", linewidths=0.6, zorder=5)
+        for v in base.values():
+            ax.scatter([0], [v], marker="D", s=20, facecolor="#D9D9D9",
+                       edgecolor="#999999", linewidths=0.6, zorder=5)
         ax.axhline(0.90, color="#777777", ls="--", lw=0.8)
         ax.set_xlabel("Label-flip dose (% of the flipped class)")
         ax.set_xlim(-2, 32)
         ax.set_xticks([0, 10, 20, 30])
-        ax.set_ylim(0.79, 1.01)
-        ax.yaxis.set_major_locator(MultipleLocator(0.05))
-    ax_a.set_ylabel("Overall coverage on Tappy target")
+        ax.set_ylim(0.38, 1.03)
+        ax.yaxis.set_major_locator(MultipleLocator(0.1))
+    ax_a.set_ylabel("Class-conditional coverage on Tappy target")
     for ax in (ax_a, ax_b):
-        ax.text(0.5, 0.9045, "nominal 0.90", fontsize=6, color="#666666",
+        ax.text(2.0, 0.905, "nominal 0.90", fontsize=6, color="#666666",
                 ha="left", va="bottom")
-    proxies = [Line2D([0], [0], color=hue, ls=ls, lw=1.2, marker="o", ms=3.5,
-                      markeredgecolor="white") for hue, ls in C6.values()]
+    proxies = [Line2D([0], [0], color=hue, ls="-", lw=1.2, marker="o", ms=3.5,
+                      markeredgecolor="white") for hue, _ls in C6.values()]
     proxies.append(Line2D([0], [0], marker="D", ls="none", markersize=4.5,
                           markerfacecolor="#D9D9D9", markeredgecolor="#999999"))
-    fig.legend(proxies, [arm_label[a] for a in C6] + ["Baseline"],
-               loc="outside upper center", ncols=4, fontsize=7, frameon=False)
+    proxies.append(Line2D([0], [0], color="#444444", ls="-", lw=1.1, marker="o", ms=3.5,
+                          markeredgecolor="white"))
+    proxies.append(Line2D([0], [0], color="#444444", ls="--", lw=1.1, marker="s", ms=3.5,
+                          markeredgecolor="white"))
+    fig.legend(proxies, [arm_label[a] for a in C6] + ["Baseline",
+               "HC-conditional (solid)", "PD-conditional (dashed)"],
+               loc="outside upper center", ncols=3, fontsize=7, frameon=False)
     ax_a.set_title("A  Calibration-only flip")
     ax_b.set_title("B  Train+calibration flip")
     obs = ta[ta["arm"] == "baseline"].iloc[0]
@@ -326,7 +337,7 @@ def fig6_stress_tests() -> None:
     ax_c.set_ylabel("Class-conditional coverage")
     ax_c.set_xlabel("C  Three-arm real-transfer test", fontsize=7.5)
     ax_c.legend(loc="upper left", fontsize=6.5, frameon=False)
-    fig.savefig(FIG / "fig6_stress_tests.png")
+    fig.savefig(FIG / "fig7_stress_tests.png")
     plt.close(fig)
 
 
@@ -364,7 +375,7 @@ def fig7_transfer_heatmap() -> None:
                         ticks=np.arange(0.4, 1.01, 0.1))
     cbar.set_label("mean test AUC (50 seeds)", fontsize=7.5)
     cbar.ax.tick_params(labelsize=7)
-    fig.savefig(FIG / "fig7_transfer_heatmap.png")
+    fig.savefig(FIG / "fig2_transfer_heatmap.png")
     plt.close(fig)
 
 
