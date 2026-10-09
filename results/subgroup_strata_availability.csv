@@ -1,0 +1,7 @@
+direction,stratum,status,covers_n,of_target,note
+tappy2mit,sex,unavailable_no_field,0,82,MIT 公开数据无性别字段；文献口径：对照组女性偏多 ~17pp（计划书局限声明冻结值）——该方向性别层不可计算，仅显式登记
+tappy2mit,age_median,unavailable_no_field,0,82,MIT 公开数据无出生年/年龄字段
+mit2tappy,sex,computed_partial,173,173,仅 Tappy 来源可算（OE 无人口学字段）；覆盖 173/173
+mit2tappy,age_median,computed_partial,145,173,仅 Tappy 来源可算（OE 无人口学字段）；覆盖 145/173
+gold_merged2self,sex,computed_partial,173,366,仅 Tappy 来源可算（OE 无人口学字段）；覆盖 173/366
+gold_merged2self,age_median,computed_partial,145,366,仅 Tappy 来源可算（OE 无人口学字段）；覆盖 145/366
