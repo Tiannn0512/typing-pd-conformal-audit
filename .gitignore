@@ -57,3 +57,4 @@ reports/_AI_style_audit_*.md
 reports/_methods_code_audit_*.md
 reports/_assets/
 reports/_assets_zh/
+scripts/_supplements_build.py
