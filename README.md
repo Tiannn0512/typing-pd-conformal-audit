@@ -38,10 +38,6 @@ English), with three pre-specified primary directions under Holm control
 
 ```
 run_all.py              pipeline entry: 23 stages in development order
-docs/                   frozen analysis plan (OSF-registered)
-01_研究计划/             study proposal versions + analysis freeze protocol
-02_查新报告/             novelty scan report
-03_可行性分析/           dataset feasibility report
 src/data/               dataset parsers, QC, schema validation
 src/features/           feature tiers L1-L3, cohort tables
 src/models/             baseline gate + 12-direction transfer pipeline
@@ -52,11 +48,11 @@ scripts/                figure and paper-table generation (from frozen CSVs)
 results/                frozen result layer (CSV, tag results-frozen-v1)
 results/paper_tables/   camera-ready tables, derived programmatically
 figures/                publication figures (600 dpi)
-reports/                supplementary tables S1-S3
-tests/                  unit tests incl. MAPIE 1.5.0 cross-check (1800/1800)
+docs/                   OSF-registered analysis plan, analysis freeze protocol,
+                        PROVENANCE (commit chain, governance tags), OSF DOI,
+                        changelogs, supplementary tables S1-S3
 configs/                registered seeds, cleaning rules, feature tiers
-logs/                   changelogs, novelty scans, pilot smoke status
-PROVENANCE.md           commit chain and governance tags
+tests/                  unit tests incl. MAPIE 1.5.0 cross-check (1800/1800)
 ```
 
 ## Installation
@@ -99,18 +95,19 @@ MAPIE cross-check: `python scripts/mapie_crosscheck.py`
 
 Result-table mapping: `results/primary_family.csv` → manuscript Table 2,
 `results/paper_tables/table6_sensitivity.csv` → Table 3,
-`results/cohort_flow.csv` → supplementary Table S1,
+`results/cohort_flow.csv` → supplementary Table S1 (`docs/supplementary/`),
 `results/transfer_matrix.csv` → supplementary Table S2,
 `results/power_table*.csv` → supplementary Table S3.
 
 ## Governance
 
-- The analysis plan was frozen and OSF-registered (embargoed; reviewers get
-  read access) before any cross-dataset coverage was computed. Development
-  tag `v1.0-prereg`.
+- The analysis plan was frozen and OSF-registered (`docs/analysis_plan_v1.md`,
+  `docs/分析冻结协议_v1.md`, `docs/osf_doi.txt`; embargoed, reviewers get read
+  access) before any cross-dataset coverage was computed. Development tag
+  `v1.0-prereg`.
 - Results were frozen at commit `ce26f33` (2026-09-27), tag
   `results-frozen-v1`. Later changes are append-only, recorded in
-  `PROVENANCE.md` and `logs/changelog_*.md`.
+  `docs/PROVENANCE.md` and `docs/changelogs/`.
 - The primary model was switched from LightGBM to logistic regression by a
   registered amendment (CHG-P1) after LightGBM failed the pre-specified
   acceptance gate (MIT in-domain, 50 seeds, AUC within 0.75-0.91); the three

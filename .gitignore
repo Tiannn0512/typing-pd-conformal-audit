@@ -36,6 +36,16 @@ reports/paper_skeleton_guide_v0.1*
 # Office 锁文件
 ~$*
 
+# ---- 开发过程产物（磁盘保留，不入库）----
+00_README.md
+TODO_0925.md
+01_研究计划/
+02_查新报告/
+03_可行性分析/
+logs/
+reports/
+zenodo_upload/
+
 # ---- 边界（2026-10-08 整理，白名单式：reports/ 只追踪现行权威）----
 # 参考文献 PDF（版权物）；手稿过程版本、临时审计稿、投稿包、导出 PDF 不入库
 04_关键文献/
@@ -47,8 +57,3 @@ reports/_AI_style_audit_*.md
 reports/_methods_code_audit_*.md
 reports/_assets/
 reports/_assets_zh/
-# reports/ 默认忽略，仅放行补充材料表（手稿不入库，随投稿包走）
-reports/*
-!reports/Supplementary_Table_S1_cleaning_attrition.docx
-!reports/Supplementary_Table_S2_coverage_matrix.docx
-!reports/Supplementary_Table_S3_power_analysis.docx
