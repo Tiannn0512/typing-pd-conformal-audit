@@ -39,6 +39,7 @@ C4 = {"tappy2mit": "#C28A3A", "mit2tappy": "#315A86",
 C5_W = "#3E8474"                                                # fig5 weighted
 C6 = {"PD2HC": ("#8E6C9E", "-"), "HC2PD": ("#C28A3A", "--"),
       "symmetric": ("#587A9E", "-.")}                           # fig6 arms
+TXT = {"lgbm": "#9E5562", "pd": "#A05050", "hc": "#4C6E92"}     # 文字专用 ≥4.5:1 版本（标记/线仍用上方面板）
 DIR3 = {"tappy2mit": "Tappy\u2192MIT", "mit2tappy": "MIT\u2192Tappy",
         "gold_merged2self": "Clinical\u2192Self-report"}
 SHORT = {"tappy2mit": "T\u2192M", "mit2tappy": "M\u2192T", "tappy2oe": "T\u2192O",
@@ -71,7 +72,7 @@ def fig1_forest() -> None:
                         capsize=2.5, ms=4.5, lw=1.1)
             ax.annotate(f"{int(r['k'])}/{int(r['n'])}", (r["ci_hi"], y),
                         xytext=(4, -2.5), textcoords="offset points", fontsize=6.5,
-                        color=C1[model])
+                        color=TXT.get(model, C1[model]))
     for i, direction in enumerate(groups):
         ax.axhline(i, color="#D9D9D9", lw=0.5, zorder=0)
     ax.axvline(0.90, color="#777777", ls="--", lw=0.8)
@@ -113,7 +114,7 @@ def fig2_class_conditional() -> None:
                 dy = -22 if l > 0.87 else -10
                 ax.annotate(f"n={int(n)}", (x + (k - 0.5) * 0.3, l),
                             xytext=(0, dy), textcoords="offset points",
-                            fontsize=6.2, ha="center", color=C2[cls],
+                            fontsize=6.2, ha="center", color=TXT.get(cls, C2[cls]),
                             bbox=dict(fc="white", ec="none", alpha=0.85, pad=0.6))
         ax.axhline(0.90, color="#777777", ls="--", lw=0.8)
         ax.axhline(0.80, color="#999999", ls=":", lw=0.8)
@@ -299,8 +300,8 @@ def fig6_stress_tests() -> None:
     fig.legend(proxies, [arm_label[a] for a in C6] + ["Baseline",
                "HC-conditional (solid)", "PD-conditional (dashed)"],
                loc="outside upper center", ncols=3, fontsize=7, frameon=False)
-    ax_a.set_title("A  Calibration-only flip")
-    ax_b.set_title("B  Train+calibration flip")
+    ax_a.set_title("a  Calibration-only flip")
+    ax_b.set_title("b  Train+calibration flip")
     obs = ta[ta["arm"] == "baseline"].iloc[0]
     groups = [("Observed", None, None),
               ("Prevalence re-matching", "resample_only", None),
@@ -335,7 +336,7 @@ def fig6_stress_tests() -> None:
     ax_c.set_xticks(x, [g[0] for g in groups], fontsize=7)
     ax_c.set_ylim(0, 1.09)
     ax_c.set_ylabel("Class-conditional coverage")
-    ax_c.set_xlabel("C  Three-arm real-transfer test", fontsize=7.5)
+    ax_c.set_xlabel("c  Three-arm real-transfer test", fontsize=7.5)
     ax_c.legend(loc="upper left", fontsize=6.5, frameon=False)
     fig.savefig(FIG / "fig7_stress_tests.png")
     plt.close(fig)
@@ -358,10 +359,10 @@ def fig7_transfer_heatmap() -> None:
         for j in range(4):
             if i == j:
                 ax.text(j, i, "\u2014", ha="center", va="center", fontsize=8,
-                        color="#999999")
+                        color="#666666")
             else:
                 v = grid[i, j]
-                txt = "#222222" if 0.15 < norm(v) < 0.72 else "white"
+                txt = "#222222" if norm(v) < 0.9 else "white"
                 ax.text(j, i, f"{v:.3f}", ha="center", va="center", fontsize=8,
                         color=txt)
     ax.set_xticks(range(4), order, fontsize=8)
