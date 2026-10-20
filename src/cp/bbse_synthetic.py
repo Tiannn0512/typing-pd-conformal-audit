@@ -45,13 +45,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.coverage_audit import CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from models.run_transfer import load_matrix  # noqa: E402
+from runtime import require
+from protocol import DIRECTIONS
+from models.common import fit_direction as shared_fit_direction
 
 MC_REPS = 500
 MC_SEED = 1       # seeds.yaml stress_seed_base（重采样随机化登记口径）
@@ -94,29 +92,8 @@ def bootstrap_ci(probs_tgt: np.ndarray, probs_src: np.ndarray, y_src: np.ndarray
 
 
 def fit_direction(cfg: dict) -> dict:
-    """本方向冻结管线：源 train 训练 LR → 返回 (源 cal 概率, 源 cal 标签, 目标概率, y_t)。"""
-    srcs, tgt = cfg["sources"], cfg["target"]
-    tgt_datasets = {"merged_self": ["tappy", "oe"]}.get(tgt, [tgt])
-    tier = min(CAP[d] for d in srcs + tgt_datasets)
-    X_s, y_s = load_pooled(srcs, tier)
-    if tgt == "merged_self":
-        subjects = pd.read_csv("data/processed/subjects.csv")
-        pool = subjects[subjects["dataset"].isin(["tappy", "oe"])]
-        cols = [c for c in pool.columns if c.startswith("L1_")]
-        X_t = pool[cols].to_numpy(dtype=float)
-        y_t = pool["label_pd"].to_numpy(dtype=int)
-    else:
-        X_t, y_t = load_matrix(tgt, tier)
-    assert X_s.shape[1] == X_t.shape[1]
-    idx = np.arange(len(X_s))
-    tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
-    scaler = StandardScaler().fit(X_s[tr_idx])
-    clf = LogisticRegression(random_state=42, max_iter=1000)
-    clf.fit(scaler.transform(X_s[tr_idx]), y_s[tr_idx])
-    return {"probs_cal": clf.predict_proba(scaler.transform(X_s[cal_idx])),
-            "y_cal": y_s[cal_idx],
-            "probs_te": clf.predict_proba(scaler.transform(X_t)),
-            "y_t": y_t}
+    result = shared_fit_direction(cfg)
+    return {key: result[key] for key in ("probs_cal", "y_cal", "probs_te", "y_t")}
 
 
 def main() -> None:
@@ -157,8 +134,7 @@ def main() -> None:
         cfg_r = next(dd for dd in DIRECTIONS if dd["direction"] == direction)
         dr = fit_direction(cfg_r)
         true_pi = len(dr["y_t"][dr["y_t"] == 1]) / len(dr["y_t"])
-        assert abs(true_pi - TRUE_PREV[direction]) < 1e-12, \
-            f"{direction} 真值患病率与冻结队列不符"
+        require(abs(true_pi - TRUE_PREV[direction]) < 1e-12, f"{direction} 真值患病率与冻结队列不符")
         pi_hat = bbse_pd_prevalence(dr["probs_cal"], dr["y_cal"], dr["probs_te"])
         lo, hi = bootstrap_ci(dr["probs_te"], dr["probs_cal"], dr["y_cal"], rng_boot)
         real_rows.append({"direction": direction, "n_target": len(dr["y_t"]),

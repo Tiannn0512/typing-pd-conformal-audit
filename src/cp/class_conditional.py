@@ -24,16 +24,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMClassifier
-from scipy.stats import beta as _beta
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.conformal import lac_scores, predict_sets_split  # noqa: E402
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from models.run_transfer import load_matrix  # noqa: E402
+from runtime import reference_path, require
+from protocol import ALPHA, DIRECTIONS, SEED
+from models.common import fit_direction
+from cp.metrics import cp_ci, set_outcomes
 
 # 2607.18088 对表声明（预注册 §8 措辞，输出文件与报告均携带）
 DIAGNOSTIC_CAVEAT = (
@@ -44,53 +40,14 @@ DIAGNOSTIC_CAVEAT = (
 )
 
 
-def cp_ci(k: int, n: int, conf: float = 0.95) -> tuple[float, float]:
-    """Clopper-Pearson 精确二项 CI，含 K=0/K=n 边界守卫（与 coverage_audit 同式）。
 
-    端点字面量 0.025/0.975 与 coverage_audit 逐字一致——(1-0.95)/2 的代数等价形式
-    会因浮点量化使 beta.ppf 末位差 1 ulp（审核定位：跨表 ci_lo 尾差根因）。"""
-    if n == 0:
-        return float("nan"), float("nan")
-    lo = float(_beta.ppf(0.025, k, n - k + 1)) if k > 0 else 0.0
-    hi = float(_beta.ppf(0.975, k + 1, n - k)) if k < n else 1.0
-    return lo, hi
 
 
 def run_direction_hits(cfg: dict, model_name: str) -> dict:
-    """与 coverage_audit.run_direction 同管线，返回受试者级 hits/sets 供类条件分解。"""
-    srcs, tgt = cfg["sources"], cfg["target"]
-    tgt_datasets = {"merged_self": ["tappy", "oe"]}.get(tgt, [tgt])
-    tier = min(CAP[d] for d in srcs + tgt_datasets)
-    X_s, y_s = load_pooled(srcs, tier)
-    if tgt == "merged_self":
-        subjects = pd.read_csv("data/processed/subjects.csv")
-        pool = subjects[subjects["dataset"].isin(["tappy", "oe"])]
-        cols = [c for c in pool.columns if c.startswith("L1_")]
-        X_t = pool[cols].to_numpy(dtype=float)
-        y_t = pool["label_pd"].to_numpy(dtype=int)
-    else:
-        X_t, y_t = load_matrix(tgt, tier)
-    assert X_s.shape[1] == X_t.shape[1]
-
-    idx = np.arange(len(X_s))
-    tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
-    scaler = StandardScaler().fit(X_s[tr_idx])
-    X_tr_s, X_cal_s, X_te_s = (scaler.transform(X_s[tr_idx]), scaler.transform(X_s[cal_idx]),
-                               scaler.transform(X_t))
-
-    if model_name == "lr":
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-    else:
-        mcs = max(1, int(len(tr_idx) // 4))  # DEC-T1 规则
-        clf = LGBMClassifier(random_state=42, verbose=-1, min_child_samples=mcs, max_depth=3)
-    clf.fit(X_tr_s, y_s[tr_idx])
-
-    scores_cal = lac_scores(clf.predict_proba(X_cal_s), y_s[cal_idx])
-    sets = predict_sets_split(scores_cal, clf.predict_proba(X_te_s), ALPHA)
-    hits = np.array([y in s for y, s in zip(y_t, sets)])
-    sizes = np.array([len(s) for s in sets])
-    return {"tier": tier, "y_t": y_t, "hits": hits, "sizes": sizes,
-            "n_source": len(y_s[tr_idx]), "n_cal": len(y_s[cal_idx])}
+    result = fit_direction(cfg, model_name)
+    y_t, hits, sizes = set_outcomes(result["y_t"], result["sets"])
+    return {"tier": result["tier"], "y_t": y_t, "hits": hits, "sizes": sizes,
+            "n_source": result["n_source"], "n_cal": result["n_cal"]}
 
 
 def class_stats(y_t: np.ndarray, hits: np.ndarray, sizes: np.ndarray,
@@ -110,10 +67,10 @@ def main() -> None:
     ap.add_argument("--primary-directions", action="store_true",
                     help="仅跑 primary family 三方向（本终点口径）")
     args = ap.parse_args()
-    assert args.classes == "PD,HC", "本终点按预注册仅定义 PD/HC 两类"
-    assert args.primary_directions, "须显式指定 --primary-directions（防误扩展到探索方向）"
+    require(args.classes == "PD,HC", "本终点按预注册仅定义 PD/HC 两类")
+    require(args.primary_directions, "须显式指定 --primary-directions（防误扩展到探索方向）")
 
-    frozen = pd.read_csv("results/primary_family.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
 
     results, subject_rows = [], []
     for cfg in DIRECTIONS:
@@ -128,11 +85,11 @@ def main() -> None:
             f = frozen[(frozen["direction"] == direction) & (frozen["model"] == model)].iloc[0]
             for col, val in [("k", k), ("n", n), ("tier", r["tier"]),
                              ("n_source", r["n_source"]), ("n_cal", r["n_cal"])]:
-                assert int(f[col]) == val, f"{direction}/{model} {col} 漂移: {f[col]} != {val}"
+                require(int(f[col]) == val, f"{direction}/{model} {col} 漂移: {f[col]} != {val}")
             for col, val in [("coverage", k / n), ("cpc_pd", hits[y_t == 1].mean()),
                              ("cpc_hc", hits[y_t == 0].mean()), ("mean_size", sizes.mean()),
                              ("singleton_rate", (sizes == 1).mean())]:
-                assert abs(float(f[col]) - val) < 1e-12, f"{direction}/{model} {col} 漂移"
+                require(abs(float(f[col]) - val) < 1e-12, f"{direction}/{model} {col} 漂移")
 
             pd_s = class_stats(y_t, hits, sizes, 1)
             hc_s = class_stats(y_t, hits, sizes, 0)

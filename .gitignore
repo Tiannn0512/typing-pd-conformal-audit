@@ -33,9 +33,6 @@ reports/paper_skeleton_guide_v0.1*
 # Office 锁文件
 ~$*
 
-# Office 锁文件
-~$*
-
 # ---- 开发过程产物（磁盘保留，不入库）----
 00_README.md
 TODO_0925.md
@@ -44,7 +41,6 @@ TODO_0925.md
 03_可行性分析/
 logs/
 reports/
-zenodo_upload/
 
 # ---- 边界（2026-10-08 整理，白名单式：reports/ 只追踪现行权威）----
 # 参考文献 PDF（版权物）；手稿过程版本、临时审计稿、投稿包、导出 PDF 不入库
@@ -59,3 +55,6 @@ reports/_assets/
 reports/_assets_zh/
 scripts/_supplements_build.py
 docs/analysis_plan_draft.md
+
+# Reproduction workspaces
+runs/

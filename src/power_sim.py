@@ -18,6 +18,7 @@ P(Undetermined) > 60% → 该方向降 exploratory。
 """
 from __future__ import annotations
 
+from runtime import config_path
 import argparse
 import json
 from pathlib import Path
@@ -56,7 +57,7 @@ def main() -> None:
     args = ap.parse_args()
 
     seed = yaml.safe_load(
-        (Path(__file__).resolve().parents[1] / "configs" / "seeds.yaml").read_text(encoding="utf-8")
+        (config_path("seeds.yaml")).read_text(encoding="utf-8")
     )["unit_test_seed"]
     rng = np.random.default_rng(seed)
 

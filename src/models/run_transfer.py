@@ -24,62 +24,26 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import seaborn as sns  # noqa: E402
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from lightgbm import LGBMClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.conformal import lac_scores, predict_sets_split  # noqa: E402
+from runtime import config_path
 
-ALPHA = 0.10
-CAP = {"mit": 3, "tappy": 2, "typd": 1, "oe": 3}
+from protocol import CAP
+from models.common import fit_transfer, load_matrix
+from cp.metrics import metrics
 DATASETS = ["mit", "tappy", "typd", "oe"]
-
-L1_COLS = [f"L1_{s}_{stat}" for s in ("hold", "latency", "flight")
-           for stat in ("mean", "median", "sd", "p10", "p90")]
-L2_COLS = [f"{s}_{h}_mean" for s in ("hold", "latency", "flight") for h in ("L", "R")]
-L3_COLS = [f"{s}_{tr}_mean" for s in ("latency", "flight") for tr in ("same", "cross")] + ["frac_cross"]
-
-
-def tier_columns(ds: str, tier: int) -> list[str]:
-    """数据集 ds 在 tier 下的 canonical 特征列（源/目标同名对齐）。"""
-    cols = list(L1_COLS)
-    if tier >= 2:
-        prefix = "L2tappy" if ds == "tappy" else f"L2_{ds}"
-        cols += [f"{prefix}_{c}" for c in L2_COLS]
-    if tier >= 3:
-        cols += [f"L3_{ds}_{c}" for c in L3_COLS]
-    return cols
-
-
-def load_matrix(ds: str, tier: int) -> tuple[np.ndarray, np.ndarray]:
-    subjects = pd.read_csv("data/processed/subjects.csv")
-    sub = subjects[subjects["dataset"] == ds]
-    l2l3 = pd.read_csv("data/processed/subjects_l2l3.csv")
-    merged = sub.merge(l2l3, on="subject_id", how="left")
-    cols = tier_columns(ds, tier)
-    X = merged[cols].to_numpy(dtype=float)
-    y = merged["label_pd"].to_numpy(dtype=int)
-    assert not np.isnan(X).any(), f"{ds} tier{tier} 特征含 NaN（{cols}）"
-    return X, y
 
 
 def sixtuple(sets, y_t, scores_pos, y_obs=None) -> dict:
-    """六元组（预注册 §1）：覆盖/PD类条件/HC类条件/平均集合大小/单例/模糊/空 + AUC。"""
-    hits = np.array([y in s for y, s in zip(y_t, sets)])
-    sizes = np.array([len(s) for s in sets])
-    out = {"coverage": hits.mean(), "cpc_pd": hits[y_t == 1].mean(),
-           "cpc_hc": hits[y_t == 0].mean(), "mean_size": sizes.mean(),
-           "singleton_rate": (sizes == 1).mean(), "fuzzy_rate": (sizes == 2).mean(),
-           "empty_rate": (sizes == 0).mean(),
-           "auc": roc_auc_score(y_t, scores_pos)}
-    return out
+    result = metrics(y_t, sets)
+    columns = ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate", "empty_rate")
+    return {**{key: result[key] for key in columns}, "fuzzy_rate": result["rejection_rate"],
+            "auc": roc_auc_score(y_t, scores_pos)}
 
 
 def main() -> None:
-    seeds = yaml.safe_load((Path(__file__).resolve().parents[2] / "configs" / "seeds.yaml")
+    seeds = yaml.safe_load((config_path("seeds.yaml"))
                            .read_text(encoding="utf-8"))["split_seeds"]
     rows = []
     for src in DATASETS:
@@ -93,31 +57,14 @@ def main() -> None:
                                    "singleton_rate", "fuzzy_rate", "empty_rate", "auc")}
             acc_lgbm = {k: [] for k in acc}
             for seed in seeds:
-                idx = np.arange(len(X_s))
-                tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=seed,
-                                                   stratify=y_s)
-                scaler = StandardScaler().fit(X_s[tr_idx])
-                X_tr_s, X_cal_s, X_te_s = (scaler.transform(X_s[tr_idx]),
-                                           scaler.transform(X_s[cal_idx]),
-                                           scaler.transform(X_t))
-
-                # 主参照 LR（CHG-P1）
-                clf = LogisticRegression(random_state=42, max_iter=1000).fit(X_tr_s, y_s[tr_idx])
-                scores_cal = lac_scores(clf.predict_proba(X_cal_s), y_s[cal_idx])
-                sets = predict_sets_split(scores_cal, clf.predict_proba(X_te_s), ALPHA)
-                for k, v in sixtuple(sets, y_t, clf.predict_proba(X_te_s)[:, 1]).items():
+                lr = fit_transfer(X_s, y_s, X_t, "lr", seed)
+                for k, v in sixtuple(lr["sets"], y_t, lr["probs_te"][:, 1]).items():
                     acc[k].append(v)
-
-                # LGBM 对照（DEC-T1：参数按 n_train 约束规则锁定，非搜索；完整六元组，用户指令）
-                mcs = max(1, int(len(tr_idx) // 4))
-                lgbm = LGBMClassifier(random_state=42, verbose=-1,
-                                      min_child_samples=mcs, max_depth=3).fit(X_tr_s, y_s[tr_idx])
-                proba_l = lgbm.predict_proba(X_te_s)
+                lgbm = fit_transfer(X_s, y_s, X_t, "lgbm", seed)
+                proba_l = lgbm["probs_te"]
                 if len(np.unique(np.round(proba_l[:, 1], 12))) == 1:
-                    raise RuntimeError(f"{src}2{tgt} seed={seed}: LGBM 对照列常数预测（机制性退化）")
-                scores_cal_l = lac_scores(lgbm.predict_proba(X_cal_s), y_s[cal_idx])
-                sets_l = predict_sets_split(scores_cal_l, proba_l, ALPHA)
-                for k, v in sixtuple(sets_l, y_t, proba_l[:, 1]).items():
+                    raise RuntimeError(f"{src}2{tgt} seed={seed}: LGBM comparator produced constant predictions")
+                for k, v in sixtuple(lgbm["sets"], y_t, proba_l[:, 1]).items():
                     acc_lgbm[k].append(v)
             rows.append({
                 "direction": f"{src}2{tgt}", "source": src, "target": tgt, "tier": tier,

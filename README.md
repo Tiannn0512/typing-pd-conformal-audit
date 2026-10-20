@@ -134,17 +134,19 @@ Further findings from the frozen layer:
 ├── src/
 │   ├── data/                          # Dataset parsers, QC, schema validation
 │   ├── features/                      # Feature tiers L1-L3, cohort tables
-│   ├── models/                        # Baseline acceptance gate, transfer pipeline
+│   ├── models/                        # Shared fitting, baseline, transfer pipeline
 │   ├── cp/                            # Conformal audit: primary family,
 │   │                                  #   class-conditional, remediation,
 │   │                                  #   stress tests, BBSE, sensitivity, subgroups
+│   ├── protocol.py                    # Effective registered settings
+│   ├── runtime.py                     # Configuration and reference paths
 │   └── power_sim.py                   # Pre-registered power simulation
 ├── scripts/
 │   ├── make_figures.py                # Publication figures from frozen CSVs
 │   ├── make_tables.py                 # Paper tables from frozen CSVs
 │   ├── mapie_crosscheck.py            # Split-CP cross-check vs MAPIE
 │   └── overlap_priority_compare.py    # Verdict-rule overlap simulation
-├── results/                           # Frozen result layer (tag results-frozen-v1)
+├── results/                           # Published reference tables
 │   └── paper_tables/                  # Camera-ready tables, derived programmatically
 ├── figures/                           # Publication figures (600 dpi)
 ├── docs/
@@ -155,7 +157,7 @@ Further findings from the frozen layer:
 │   ├── changelogs/                    # Post-freeze change logs
 │   └── supplementary/                 # Supplementary Tables S1-S3
 ├── configs/                           # Registered seeds, cleaning rules, feature tiers
-├── tests/                             # Unit tests incl. MAPIE cross-check (1800/1800)
+├── tests/                             # Core, schema and reproduction regression tests
 └── data/raw/DATA_MANIFEST.md          # Dataset sources and SHA-256 checksums
 ```
 
@@ -180,24 +182,24 @@ checksums). Tappy requires registration; TyPD requires an application.
 ### 2. Run the pipeline
 
 ```bash
-python run_all.py                             # print the 23-stage plan
-python run_all.py --run                       # end-to-end
-python run_all.py --from cp.coverage_audit    # resume from a stage
+python run_all.py
+python run_all.py --run --data-dir /path/to/prepared/raw --output-dir runs/reproduction
+python run_all.py --run --from cp.coverage_audit --output-dir runs/reproduction
 ```
 
-Stages run in development order: parsing → QC → features → cohort → baseline
-gate → transfer → conformal audit → class-conditional → remediation →
-calibration comparison → stress tests → BBSE → sensitivity → subgroups →
-power → tables/figures. Stage commands use module defaults, which equal the
-registered settings; module-level asserts reject deviations (arm lists,
-doses, strata, prevalence constants). Regenerated outputs must be diffed
-against the frozen layer in `results/` before anything is replaced.
+The first command prints the 23-stage plan. The second executes it in a new workspace; the third resumes an existing workspace whose earlier stages completed. Prepared inputs follow the directory structure in `data/raw/DATA_MANIFEST.md`.
+
+Stages follow their data dependencies: parsing → schema checks → cleaning and cohort tables → L2/L3 features → QC report → baseline → transfer → conformal analyses → power → tables and figures. The baseline records the original LightGBM gate outcome and continues under the approved CHG-P1 choice of logistic regression. `train_baseline.py --gate-mode historical` retains the original nonzero exit on a failed LightGBM gate.
+
+A workspace contains `data/`, `results/`, `figures/`, `models/`, stage logs and `run.json`. The runner snapshots the reference tables separately in `reference/`, records the effective configuration and environment, and compares generated CSVs with those references. Numeric cells use absolute tolerance `1e-9`; text, table structure and row order must match. Differences or missing reference tables produce a nonzero exit and remain available in the workspace for inspection. Existing output directories require `--from` to resume; code, configuration and input changes require a new run.
+
+`results/` in this repository contains the published reference tables. All pipeline writes go to the selected workspace. Lower-level analysis scripts use paths relative to their working directory; run them from a workspace when inspecting an individual stage.
 
 ### 3. Tests and cross-checks
 
 ```bash
 python -m pytest tests/          # unit tests
-python scripts/mapie_crosscheck.py   # split-CP vs MAPIE 1.5.0, 1800/1800 cells
+python scripts/mapie_crosscheck.py --output-dir runs/mapie-check
 ```
 
 ### 4. Reproducing the manuscript tables and figures
@@ -229,7 +231,7 @@ CSVs — no hand-copied values.
   registered amendment (CHG-P1) after LightGBM failed the pre-specified
   acceptance gate (MIT in-domain, 50 seeds, AUC within 0.75-0.91); the three
   gate runs are kept in `results/baseline_mit_*.csv`.
-- This branch carries a single release commit; the full development history
+- This branch contains the public release and subsequent maintenance commits; the full development history
   (both governance tags) is preserved on the `archive/dev-history` branch.
 
 ## Citation

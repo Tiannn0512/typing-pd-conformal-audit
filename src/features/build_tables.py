@@ -21,20 +21,44 @@
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime import require
 import argparse
 import json
-import shutil
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yaml
 
-HOLD_MAX_MS = 10_000
-FLIGHT_MAX_MS = 3_000
-MIN_RATE = 20.0
-SESSION_MIN_DIGRAPH = 100
-PERSON_MIN_DIGRAPH = 300
+from runtime import config_path
+
+
+def load_cleaning_config(path=None):
+    cfg = yaml.safe_load(Path(path or config_path("cleaning.yaml")).read_text(encoding="utf-8"))
+    mandatory = {"digraph_pool": ("require_keep_flag", "require_digraph_timestamps"),
+                 "digraph_rules": ("hold_le0_remove", "hold_gt10s_remove", "latency_le0_remove", "latency_gt10s_remove"),
+                 "fixed_text_rules": ("flight_gt3s_remove",),
+                 "visit_selection": ("mit_first_visit_only",),
+                 "cohort_rules": ("require_label", "require_events", "tremor_only_exclude_main")}
+    try:
+        for section, names in mandatory.items():
+            for name in names:
+                require(cfg[section][name] is True, f"The registered cleaning rule {section}.{name} must be true")
+        require(cfg["text_type"] == {"mit": "fixed", "typd": "fixed", "oe": "fixed", "tappy": "free"},
+                "Dataset text types differ from the registered plan")
+        for section, name in (("fixed_text_rules", "min_chars_per_min"),
+                              ("session_rules", "min_valid_digraphs"), ("person_rules", "min_valid_digraphs")):
+            value = cfg[section][name]
+            require(type(value) in (int, float) and np.isfinite(value) and value > 0,
+                    f"{section}.{name} must be positive and finite")
+        require(isinstance(cfg["cohort_rules"]["oe_hy0_rule"], str), "Missing OE cohort rule")
+    except (KeyError, TypeError) as exc:
+        raise ValueError(f"Incomplete cleaning configuration: {exc}") from exc
+    return cfg
+
 
 INTERIM = Path("data/interim")
 PROCESSED = Path("data/processed")
@@ -56,7 +80,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
     mit = []
     for cs in ("MIT-CS1PD", "MIT-CS2PD"):
         df = pd.read_csv(INTERIM.parent / "raw" / "mit" / cs / f"GT_DataPD_{cs}.csv")
-        assert df["gt"].notna().all(), f"{cs} GT gt 列含 NaN"
+        require(df["gt"].notna().all(), f"{cs} GT gt 列含 NaN")
         for _, r in df.iterrows():
             # gt 列被 read_csv 自动推断为 bool（或保持 "True" 字符串）——双态兼容
             gt = r["gt"]
@@ -64,7 +88,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
             mit.append({"subject": str(int(r["pID"])), "label_pd": label_pd,
                         "tremor_only": False, "label_source": "clinical"})
     typd = pd.read_csv(INTERIM / "typd_clinical.csv")
-    assert typd["Group"].notna().all(), "typd 临床表 Group 列含 NaN"
+    require(typd["Group"].notna().all(), "typd 临床表 Group 列含 NaN")
     typd = pd.DataFrame({
         "subject": typd["subject"],
         "label_pd": typd["Group"] == "PD",
@@ -72,7 +96,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "label_source": "clinical",
     })
     tappy = pd.read_csv(INTERIM / "tappy_users.csv")
-    assert tappy["Parkinsons"].notna().all() and tappy["Tremors"].notna().all(),         "tappy 标签表 Parkinsons/Tremors 含 NaN"
+    require(tappy["Parkinsons"].notna().all() and tappy["Tremors"].notna().all(), "tappy 标签表 Parkinsons/Tremors 含 NaN")
     tappy = pd.DataFrame({
         "subject": tappy["subject"].astype(str),
         "label_pd": tappy["Parkinsons"] == True,   # noqa: E712
@@ -80,7 +104,7 @@ def load_labels() -> dict[str, pd.DataFrame]:
         "label_source": "self_report",
     })
     oe = pd.read_csv(INTERIM / "oe_subjects.csv")
-    assert oe["diagnosis"].notna().all(), "oe_subjects diagnosis 列含 NaN"
+    require(oe["diagnosis"].notna().all(), "oe_subjects diagnosis 列含 NaN")
     oe = pd.DataFrame({
         "subject": oe["subject"].astype(str),
         "label_pd": oe["diagnosis"] == 1,
@@ -90,14 +114,15 @@ def load_labels() -> dict[str, pd.DataFrame]:
     out = {"mit": pd.DataFrame(mit), "typd": typd, "tappy": tappy, "oe": oe}
     # 标签 NaN 防护第二层（源列断言见上；此处派生列断言对 bool 列恒真、对 subject 列有效）
     for name, df_lab in out.items():
-        assert df_lab["subject"].notna().all(), f"{name} 标签表 subject 含 NaN"
-        assert df_lab["label_pd"].notna().all(), f"{name} 标签表 label_pd 含 NaN"
-        assert df_lab["tremor_only"].notna().all(), f"{name} 标签表 tremor_only 含 NaN"
+        require(df_lab["subject"].notna().all(), f"{name} 标签表 subject 含 NaN")
+        require(df_lab["label_pd"].notna().all(), f"{name} 标签表 label_pd 含 NaN")
+        require(df_lab["tremor_only"].notna().all(), f"{name} 标签表 tremor_only 含 NaN")
     return out
 
 
-def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def clean_dataset(dataset: str, flow: list[dict], cfg=None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """返回 (存活 digraph DataFrame, session 记录表 DataFrame)。flow 原地追加队列表行。"""
+    cfg = cfg if cfg is not None else load_cleaning_config()
     df = pd.read_parquet(EVENTS[dataset])
     press = PRESS_COL[dataset]
     n_raw_events = len(df)
@@ -116,8 +141,8 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
     n_pool = len(pool)
 
     # ② digraph 通用规则
-    ok = (pool["hold_ms"] > 0) & (pool["hold_ms"] <= HOLD_MAX_MS) \
-        & (pool["latency_ms"] > 0) & (pool["latency_ms"] <= HOLD_MAX_MS)
+    ok = (pool["hold_ms"] > 0) & (pool["hold_ms"] <= 10_000) \
+        & (pool["latency_ms"] > 0) & (pool["latency_ms"] <= 10_000)
     n_drop_hold_latency = int((~ok).sum())
     pool = pool[ok]
     n_after_universal = len(pool)  # 快照：flight 过滤前（S2 行显示口径）
@@ -125,7 +150,7 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
     # ③ 固定文本规则
     n_drop_flight = 0
     if dataset in ("mit", "typd", "oe"):
-        okf = pool["flight_ms"] <= FLIGHT_MAX_MS
+        okf = pool["flight_ms"] <= 3_000
         n_drop_flight = int((~okf).sum())
         pool = pool[okf]
 
@@ -152,17 +177,19 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
         sess_stat = sess_stat[keep_sess].drop(columns=["epoch"])
 
     # ③b 速率规则（仅固定文本）+ ④ session 最小 digraph 数
+    rate_reason = f"rate_lt{cfg['fixed_text_rules']['min_chars_per_min']:g}"
+    session_reason = f"valid_lt{cfg['session_rules']['min_valid_digraphs']:g}"
     sess_stat["excluded_by"] = ""
     if dataset in ("mit", "typd", "oe"):
-        m = sess_stat["rate"] < MIN_RATE
-        sess_stat.loc[m, "excluded_by"] = "rate_lt20"
-    m2 = sess_stat["n_valid"] < SESSION_MIN_DIGRAPH
-    sess_stat.loc[m2 & (sess_stat["excluded_by"] == ""), "excluded_by"] = "valid_lt100"
+        m = sess_stat["rate"] < cfg["fixed_text_rules"]["min_chars_per_min"]
+        sess_stat.loc[m, "excluded_by"] = rate_reason
+    m2 = sess_stat["n_valid"] < cfg["session_rules"]["min_valid_digraphs"]
+    sess_stat.loc[m2 & (sess_stat["excluded_by"] == ""), "excluded_by"] = session_reason
     # 一个 session 若同时违反速率与最小数，保留首个原因（计数不重复）
 
     kept_sessions = sess_stat[sess_stat["excluded_by"] == ""]
-    n_drop_rate = int((sess_stat["excluded_by"] == "rate_lt20").sum())
-    n_drop_min100 = int((sess_stat["excluded_by"] == "valid_lt100").sum())
+    n_drop_rate = int((sess_stat["excluded_by"] == rate_reason).sum())
+    n_drop_min100 = int((sess_stat["excluded_by"] == session_reason).sum())
 
     # S5 行数值快照——必须在 person 过滤之前（合并终审 B/发现1：2026-09-26 首修位置错误，
     # 快照落在了 person 过滤后致 S5==S6；本次移至 session 级过滤之后、person 过滤之前）
@@ -173,7 +200,7 @@ def clean_dataset(dataset: str, flow: list[dict]) -> tuple[pd.DataFrame, pd.Data
     #              唯一 session 已被 session 级规则剔光的人归入 n_drop_all_sessions）
     persons_before = set(sess_stat["subject"].unique())
     per_subj = kept_sessions.groupby("subject", observed=True)["n_valid"].sum()
-    ok_subj = set(per_subj[per_subj >= PERSON_MIN_DIGRAPH].index)
+    ok_subj = set(per_subj[per_subj >= cfg["person_rules"]["min_valid_digraphs"]].index)
     kept_sessions = kept_sessions[kept_sessions["subject"].isin(ok_subj)]
     persons_after = set(kept_sessions["subject"].unique())
     n_drop_all_sessions = len(persons_before - set(per_subj.index))          # session 级规则剔光者
@@ -243,7 +270,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/cleaning.yaml")
     args = ap.parse_args()
-    cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
+    cfg = load_cleaning_config(args.config)
 
     PROCESSED.mkdir(parents=True, exist_ok=True)
     Path("results").mkdir(exist_ok=True)
@@ -251,7 +278,7 @@ def main() -> None:
     finals, sess_all = {}, []
     raw_subjects = {}
     for dataset in ("mit", "tappy", "typd", "oe"):
-        final, sess_stat, subj_set = clean_dataset(dataset, flow)
+        final, sess_stat, subj_set = clean_dataset(dataset, flow, cfg)
         finals[dataset] = final
         sess_all.append(sess_stat)
         raw_subjects[dataset] = subj_set
@@ -304,7 +331,7 @@ def main() -> None:
     ]
     # session 唯一性断言（TODO-1.4 移交 W3 验收项，2026-09-26 登记闭环）
     dup = sessions_out.duplicated(subset=["dataset", "subject", "session"])
-    assert not dup.any(), f"session 唯一性断言失败：{int(dup.sum())} 条重复 (dataset,subject,session)"
+    require(not dup.any(), f"session 唯一性断言失败：{int(dup.sum())} 条重复 (dataset,subject,session)")
 
     subjects_out = subjects_all.copy()
     cols_front = ["subject_id", "dataset", "subject", "label_pd", "label_source"]
@@ -332,9 +359,9 @@ def main() -> None:
     gate_pass = n_eligible >= 400
     report = {
         "config_echo": Path(args.config).name,
-        "thresholds": {"hold_max_ms": HOLD_MAX_MS, "flight_max_ms": FLIGHT_MAX_MS,
-                       "min_rate": MIN_RATE, "session_min_digraph": SESSION_MIN_DIGRAPH,
-                       "person_min_digraph": PERSON_MIN_DIGRAPH},
+        "thresholds": {"hold_max_ms": 10_000, "flight_max_ms": 3_000,
+                       "min_rate": cfg["fixed_text_rules"]["min_chars_per_min"], "session_min_digraph": cfg["session_rules"]["min_valid_digraphs"],
+                       "person_min_digraph": cfg["person_rules"]["min_valid_digraphs"]},
         "n_eligible_total": n_eligible,
         "n_pd_total": n_pd,
         "n_hc_total": n_eligible - n_pd,

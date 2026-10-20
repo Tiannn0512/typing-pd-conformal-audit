@@ -195,3 +195,13 @@
 - 实现：V6.0 EN+ZH Declarations 节内（Ethics Approval 前）新增 "Use of AI-Assisted Tools"/"AI 辅助工具使用" 小节，一句事实性声明（用户任务书给定措辞：LLM-based tools for code and drafting assistance under the author's direction; author takes full responsibility）+ 公开存档指向 Code Availability。
 - 同步决定：README 不加"提交信息≠研究记录"框架句（用户裁定不加）。
 - 提醒：JOMS 投稿问卷与 cover letter 的 AI 披露照旧勾选；公开仓库披露句保持原样。
+
+
+## 2026-10-20: reproduction software maintenance
+
+- Order cohort cleaning before L2/L3 feature construction, which consumes the cleaned event pool.
+- Record the historical LightGBM gate outcome while following the approved CHG-P1 LR continuation; retain an explicit historical gate mode.
+- Run stages in a separate workspace with a reference snapshot, effective configuration, environment, fitted model artifacts and CSV comparison report.
+- Share feature alignment, source-only fitting and prediction-set metrics across analysis scripts; validate malformed labels, probabilities and weight arrays.
+- Replace runtime assertions with explicit checks and make the smoke path use the registered transfer implementation.
+- Correct the resume command and the public-history description. Published tables and historical registration records are retained.

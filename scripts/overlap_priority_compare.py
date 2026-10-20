@@ -21,6 +21,7 @@ sys_path = Path(__file__).resolve().parents[1] / "src"
 import sys  # noqa: E402
 
 sys.path.insert(0, str(sys_path))
+from runtime import config_path
 from power_sim import clopper_pearson_ci  # noqa: E402
 
 PRIMARY = ("tappy2mit", "mit2tappy", "gold_merged2self")
@@ -51,7 +52,7 @@ def main() -> None:
     args = ap.parse_args()
 
     seed = yaml.safe_load(
-        (Path(__file__).resolve().parents[1] / "configs" / "seeds.yaml").read_text(encoding="utf-8")
+        (config_path("seeds.yaml")).read_text(encoding="utf-8")
     )["unit_test_seed"]
     rng = np.random.default_rng(seed)
 

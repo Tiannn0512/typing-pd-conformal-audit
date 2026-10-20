@@ -52,91 +52,41 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import beta as _beta
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime import reference_path, require
 from cp.conformal import (  # noqa: E402
     WeightedConformal,
     lac_scores,
     predict_sets_split,
     split_conformal_quantile,
 )
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from models.run_transfer import load_matrix  # noqa: E402
+from protocol import ALPHA, CAP, DIRECTIONS
+from models.common import fit_transfer, load_pooled
+from models.common import load_matrix
+from cp.metrics import metrics
+from cp.calibration import stratified_draw, protocol_budget_split, density_ratio_weights
+from cp.conformal import sets_at_quantile  # noqa: E402
 
 DRAW_SEED = 1  # seeds.yaml stress_seed_base（重采样随机化登记口径）
 BUDGET_GRADIENT = (5, 10, 20, 30)  # §11 登记梯度（%；0 = naive/weighted 锚点行）
 AUDIT_THRESHOLD = 0.80  # pre-specified operational audit threshold（§6）
-W_CLIP_QUANTILE = 0.99  # 预登记截断规则（合池 p99，非调优值）
 
 
-def cp_ci(k: int, n: int) -> tuple[float, float]:
-    lo = float(_beta.ppf(0.025, k, n - k + 1)) if k > 0 else 0.0
-    hi = float(_beta.ppf(0.975, k + 1, n - k)) if k < n else 1.0
-    return lo, hi
 
 
-def sets_at_quantile(probs: np.ndarray, q: float) -> list[frozenset[int]]:
-    return [frozenset(y for y in (0, 1) if (1.0 - row[y]) <= q) for row in np.asarray(probs, float)]
 
 
-def metrics(y: np.ndarray, sets: list[frozenset[int]]) -> dict:
-    hits = np.array([t in s for t, s in zip(y, sets)])
-    sizes = np.array([len(s) for s in sets])
-    k, n = int(hits.sum()), int(len(hits))
-    lo, hi = cp_ci(k, n)
-    return {"k": k, "n": n, "coverage": k / n, "ci_lo": lo, "ci_hi": hi,
-            "cpc_pd": float(hits[y == 1].mean()), "cpc_hc": float(hits[y == 0].mean()),
-            "mean_size": float(sizes.mean()), "singleton_rate": float((sizes == 1).mean()),
-            "rejection_rate": float((sizes == 2).mean()), "empty_rate": float((sizes == 0).mean())}
 
 
-def stratified_draw(y: np.ndarray, m: int, rng: np.random.Generator) -> np.ndarray:
-    """类别分层比例抽取 m 个下标（PD 先 round，HC 取余），精确命中 m。"""
-    n_pd = int((y == 1).sum())
-    m_pd = min(max(int(round(m * n_pd / len(y))), 0), m)
-    m_hc = m - m_pd
-    m_pd = min(m_pd, n_pd)
-    m_hc = min(m_hc, int((y == 0).sum()))
-    idx = np.concatenate([rng.choice(np.flatnonzero(y == 1), size=m_pd, replace=False),
-                          rng.choice(np.flatnonzero(y == 0), size=m_hc, replace=False)])
-    assert len(idx) == m, f"分层抽取未命中 m={m}"
-    return np.sort(idx)
 
 
-def protocol_budget_split(n: int, n_tappy: int, m: int) -> tuple[int, int]:
-    m_tappy = int(round(m * n_tappy / n))
-    return m_tappy, m - m_tappy
 
 
-def density_ratio_weights(X_s_tr: np.ndarray, X_cal: np.ndarray, X_t: np.ndarray,
-                          ) -> tuple[np.ndarray, np.ndarray, dict]:
-    """预登记密度比估计：域分类器 LR（balanced，同主参照配置）→ w=p/(1−p)，
-    合池 p99 截断，c=1/mean(w_test) 归一（同一 c 作用 cal/test）。"""
-    X_dom = np.vstack([X_s_tr, X_t])
-    y_dom = np.concatenate([np.zeros(len(X_s_tr), int), np.ones(len(X_t), int)])
-    dom = LogisticRegression(class_weight="balanced", random_state=42, max_iter=1000)
-    dom.fit(X_dom, y_dom)
 
-    def odds(X):
-        p = dom.predict_proba(X)[:, 1]
-        p = np.clip(p, 1e-12, 1 - 1e-12)
-        return p / (1.0 - p)
 
-    w_cal_raw, w_te_raw = odds(X_cal), odds(X_t)
-    cap = float(np.quantile(np.concatenate([w_cal_raw, w_te_raw]), W_CLIP_QUANTILE))
-    frac_clipped = float((w_te_raw >= cap).mean())
-    w_cal, w_te = np.minimum(w_cal_raw, cap), np.minimum(w_te_raw, cap)
-    c = 1.0 / float(w_te.mean())
-    w_cal, w_te = w_cal * c, w_te * c
-    stats = {"w_mean": float(w_te.mean()), "w_median": float(np.median(w_te)),
-             "w_p95": float(np.quantile(w_te, 0.95)), "w_p99": float(np.quantile(w_te, 0.99)),
-             "w_max": float(w_te.max()), "frac_clipped": frac_clipped,
-             "w_cap_raw": cap}
-    return w_cal, w_te, stats
+
+
 
 
 def main() -> None:
@@ -146,9 +96,9 @@ def main() -> None:
     args = ap.parse_args()
     methods = args.methods.split(",")
     budgets = [int(b) for b in args.budget.split(",")]
-    assert "target_recalib" in methods, "recalib 链为恢复-代价表主体（RQ3 正式结果）"
+    require("target_recalib" in methods, "recalib 链为恢复-代价表主体（RQ3 正式结果）")
 
-    frozen = pd.read_csv("results/primary_family.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
     rows = []
     rng = np.random.default_rng(DRAW_SEED)  # 预声明：单生成器按（方向, 预算）顺序消耗
 
@@ -167,17 +117,14 @@ def main() -> None:
         else:
             X_t, y_t = load_matrix(tgt, tier)
             proto_t = np.array([tgt] * len(y_t), dtype=object)
-        assert X_s.shape[1] == X_t.shape[1]
+        require(X_s.shape[1] == X_t.shape[1], "Analysis invariant failed")
 
-        idx = np.arange(len(X_s))
-        tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
-        scaler = StandardScaler().fit(X_s[tr_idx])
+        fitted = fit_transfer(X_s, y_s, X_t)
+        tr_idx, cal_idx = fitted["train_indices"], fitted["calibration_indices"]
+        scaler, clf = fitted["scaler"], fitted["clf"]
         X_tr_s, X_cal_s, X_te_s = (scaler.transform(X_s[tr_idx]), scaler.transform(X_s[cal_idx]),
-                                   scaler.transform(X_t))
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-        clf.fit(X_tr_s, y_s[tr_idx])
-        scores_cal = lac_scores(clf.predict_proba(X_cal_s), y_s[cal_idx])
-        probs_te = clf.predict_proba(X_te_s)
+                                  scaler.transform(X_t))
+        scores_cal, probs_te = fitted["scores_cal"], fitted["probs_te"]
         direction = cfg["direction"]
         n_target = len(y_t)
 
@@ -186,9 +133,9 @@ def main() -> None:
         m_naive = metrics(y_t, sets_naive)
         f = frozen[(frozen["direction"] == direction) & (frozen["model"] == "lr")].iloc[0]
         for col, val in [("k", m_naive["k"]), ("n", m_naive["n"])]:
-            assert int(f[col]) == val, f"{direction} naive {col} 漂移"
+            require(int(f[col]) == val, f"{direction} naive {col} 漂移")
         for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-            assert abs(float(f[col]) - m_naive[col]) < 1e-12, f"{direction} naive {col} 漂移"
+            require(abs(float(f[col]) - m_naive[col]) < 1e-12, f"{direction} naive {col} 漂移")
         rows.append({"direction": direction, "method": "naive_cp", "budget_pct": 0,
                      "n_target_labels": 0, **m_naive, "qhat_inf": False,
                      "note": "= primary 审计锚点行（断言一致）"})

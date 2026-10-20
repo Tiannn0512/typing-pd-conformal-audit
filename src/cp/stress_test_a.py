@@ -50,15 +50,15 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.conformal import lac_scores, predict_sets_split, split_conformal_quantile  # noqa: E402
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from cp.remediate import metrics, sets_at_quantile  # noqa: E402
-from models.run_transfer import load_matrix  # noqa: E402
+from runtime import reference_path, require
+from cp.conformal import lac_scores, split_conformal_quantile  # noqa: E402
+from protocol import ALPHA, CAP, DIRECTIONS
+from models.common import fit_model, source_split, load_pooled
+from cp.metrics import metrics
+from cp.conformal import sets_at_quantile  # noqa: E402
+from models.common import load_matrix  # noqa: E402
 
 STRESS_SEED = 1  # seeds.yaml stress_seed_base（重采样随机化登记口径）
 ARMS = ("PD2HC", "HC2PD", "symmetric")
@@ -121,22 +121,22 @@ def main() -> None:
     ap.add_argument("--dose", default="10,20,30")
     ap.add_argument("--unit", default="person", choices=["person"])
     args = ap.parse_args()
-    assert args.direction.split(",") == list(ARMS), "臂清单须与预注册一致"
-    assert [int(d) for d in args.dose.split(",")] == list(DOSES), "剂量须与预注册一致"
-    assert args.unit == "person", "注册口径为源域人级翻转"
+    require(args.direction.split(",") == list(ARMS), "臂清单须与预注册一致")
+    require([int(d) for d in args.dose.split(",")] == list(DOSES), "剂量须与预注册一致")
+    require(args.unit == "person", "注册口径为源域人级翻转")
 
     cfg = next(d for d in DIRECTIONS if d["direction"] == "mit2tappy")
     srcs, tgt = cfg["sources"], cfg["target"]
     tier = min(CAP[d] for d in srcs + [tgt])
     X_s, y_s = load_pooled(srcs, tier)
     X_t, y_t = load_matrix(tgt, tier)
-    assert X_s.shape[1] == X_t.shape[1]
+    require(X_s.shape[1] == X_t.shape[1], "Analysis invariant failed")
 
     idx = np.arange(len(X_s))
-    tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
+    tr_idx, cal_idx = source_split(y_s)
     n_pd, n_hc = int((y_s == 1).sum()), int((y_s == 0).sum())
 
-    frozen = pd.read_csv("results/primary_family.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
     f = frozen[(frozen["direction"] == "mit2tappy") & (frozen["model"] == "lr")].iloc[0]
     rows = []
     rng = np.random.default_rng(STRESS_SEED)  # 预声明消耗顺序：臂×剂量升序，每格一次
@@ -144,9 +144,7 @@ def main() -> None:
     def run_cell(y_train: np.ndarray, y_cal: np.ndarray, scope: str,
                  r_pd: float, r_hc: float) -> dict:
         """单 cell：给定（训练标签, 校准标签, scope, 实现翻转率）→ 全管线 + 双侧理论核查。"""
-        scaler = StandardScaler().fit(X_s[tr_idx])
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-        clf.fit(scaler.transform(X_s[tr_idx]), y_train)
+        scaler, clf = fit_model(X_s[tr_idx], y_train)
         probs_cal = clf.predict_proba(scaler.transform(X_s[cal_idx]))
         y_cal_clean = y_s[cal_idx]
         same_cal = np.array_equal(y_cal, y_cal_clean)
@@ -172,9 +170,9 @@ def main() -> None:
     # ---- 剂量 0 基线（scope 无关；= primary naive 锚点）
     row = run_cell(y_s[tr_idx], y_s[cal_idx], "none", 0.0, 0.0)
     for col, val in [("k", row["k"]), ("n", row["n"])]:
-        assert int(f[col]) == val, f"baseline {col} 漂移"
+        require(int(f[col]) == val, f"baseline {col} 漂移")
     for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-        assert abs(float(f[col]) - row[col]) < 1e-12, f"baseline {col} 漂移"
+        require(abs(float(f[col]) - row[col]) < 1e-12, f"baseline {col} 漂移")
     rows.append({"arm": "none", "dose_pct": 0, "scope": "none", "n_flipped_pd": 0,
                  "n_flipped_hc": 0, "rate_pd": 0.0, "rate_hc": 0.0,
                  **row, "note": "= primary naive 锚点（断言一致）"})

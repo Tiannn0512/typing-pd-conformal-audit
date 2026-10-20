@@ -42,26 +42,25 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime import reference_path, require
 from cp.conformal import (  # noqa: E402
     WeightedConformal,
     lac_scores,
     predict_sets_split,
     split_conformal_quantile,
 )
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from cp.remediate import (  # noqa: E402
+from protocol import ALPHA, CAP, DIRECTIONS
+from models.common import fit_transfer, load_pooled
+from cp.calibration import (
     density_ratio_weights,
-    metrics,
     protocol_budget_split,
-    sets_at_quantile,
     stratified_draw,
 )
-from models.run_transfer import load_matrix  # noqa: E402
+from models.common import load_matrix
+from cp.metrics import metrics
+from cp.conformal import sets_at_quantile
 
 DRAW_SEED = 1  # seeds.yaml stress_seed_base（与 4.4 同源同序，见预声明 2）
 BUDGETS = (5, 10, 20, 30)
@@ -73,29 +72,28 @@ def main() -> None:
     ap.add_argument("--methods", default="gold_direct,target_recalib,weighted_cp")
     ap.add_argument("--directions", default="primary")
     args = ap.parse_args()
-    assert args.methods.split(",") == ["gold_direct", "target_recalib", "weighted_cp"]
-    assert args.directions == "primary", "实验 B 注册口径 = primary family 三方向"
+    require(args.methods.split(",") == ["gold_direct", "target_recalib", "weighted_cp"], "Analysis invariant failed")
+    require(args.directions == "primary", "实验 B 注册口径 = primary family 三方向")
 
-    frozen = pd.read_csv("results/primary_family.csv")
-    rc = pd.read_csv("results/recovery_cost_table.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
+    rc = pd.read_csv(reference_path("recovery_cost_table.csv"))
 
     def rc_row(direction: str, method: str, budget: int | None) -> pd.Series:
         m = (rc["direction"] == direction) & (rc["method"] == method)
         if budget is not None:
             m &= rc["budget_pct"] == budget
         out = rc[m]
-        assert len(out) == 1, f"recovery_cost 行缺失: {direction}/{method}/{budget}"
+        require(len(out) == 1, f"recovery_cost 行缺失: {direction}/{method}/{budget}")
         return out.iloc[0]
 
     def assert_match(direction: str, method: str, budget: int | None,
                      m: dict, q_inf: bool) -> None:
         f = rc_row(direction, method, budget)
-        assert int(f["k"]) == m["k"] and int(f["n"]) == m["n"]
-        assert bool(f["qhat_inf"]) == q_inf
+        require(int(f["k"]) == m["k"] and int(f["n"]) == m["n"], "Analysis invariant failed")
+        require(bool(f["qhat_inf"]) == q_inf, "Analysis invariant failed")
         for col in ("coverage", "ci_lo", "ci_hi", "cpc_pd", "cpc_hc",
                     "mean_size", "singleton_rate", "rejection_rate"):
-            assert abs(float(f[col]) - m[col]) < 1e-12, \
-                f"{direction}/{method}/b={budget} {col} 与 4.4 漂移"
+            require(abs(float(f[col]) - m[col]) < 1e-12, f"{direction}/{method}/b={budget} {col} 与 4.4 漂移")
 
     rng = np.random.default_rng(DRAW_SEED)  # 预声明消耗顺序 = 4.4 逐位同序
     RC_NAME = {"gold_direct": "naive_cp", "weighted_cp": "weighted_cp",
@@ -116,17 +114,14 @@ def main() -> None:
         else:
             X_t, y_t = load_matrix(tgt, tier)
             proto_t = np.array([tgt] * len(y_t), dtype=object)
-        assert X_s.shape[1] == X_t.shape[1]
+        require(X_s.shape[1] == X_t.shape[1], "Analysis invariant failed")
 
-        idx = np.arange(len(X_s))
-        tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
-        scaler = StandardScaler().fit(X_s[tr_idx])
+        fitted = fit_transfer(X_s, y_s, X_t)
+        tr_idx, cal_idx = fitted["train_indices"], fitted["calibration_indices"]
+        scaler, clf = fitted["scaler"], fitted["clf"]
         X_tr_s, X_cal_s, X_te_s = (scaler.transform(X_s[tr_idx]), scaler.transform(X_s[cal_idx]),
-                                   scaler.transform(X_t))
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-        clf.fit(X_tr_s, y_s[tr_idx])
-        scores_cal = lac_scores(clf.predict_proba(X_cal_s), y_s[cal_idx])
-        probs_te = clf.predict_proba(X_te_s)
+                                  scaler.transform(X_t))
+        scores_cal, probs_te = fitted["scores_cal"], fitted["probs_te"]
         direction, n_target = cfg["direction"], len(y_t)
 
         def emit(method: str, budget: int, n_labels: int, m: dict, q_inf: bool,
@@ -149,9 +144,9 @@ def main() -> None:
         sets_g = predict_sets_split(scores_cal, probs_te, ALPHA)
         m_g = metrics(y_t, sets_g)
         f = frozen[(frozen["direction"] == direction) & (frozen["model"] == "lr")].iloc[0]
-        assert int(f["k"]) == m_g["k"] and int(f["n"]) == m_g["n"]
+        require(int(f["k"]) == m_g["k"] and int(f["n"]) == m_g["n"], "Analysis invariant failed")
         for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-            assert abs(float(f[col]) - m_g[col]) < 1e-12, f"{direction} gold_direct 漂移"
+            require(abs(float(f[col]) - m_g[col]) < 1e-12, f"{direction} gold_direct 漂移")
         emit("gold_direct", 0, 0, m_g, False, "≡ naive 锚点（primary + 4.4 双断言）")
 
         # ---- 臂 2：weighted CP（0 标注）

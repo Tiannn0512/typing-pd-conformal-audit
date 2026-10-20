@@ -20,6 +20,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime import config_path, require
 
 PROCESSED = Path("data/processed")
 INTERIM = Path("data/interim")
@@ -29,8 +30,8 @@ EVENTS = {"mit": "final_digraphs.parquet", "oe": "final_digraphs.parquet"}
 
 
 def load_mapping() -> tuple[dict[str, str], set[str], dict[str, str], dict[str, str]]:
-    cfg = yaml.safe_load((Path(__file__).resolve().parents[2] / "configs" / "key_hand_mapping.yaml").read_text(encoding="utf-8"))
-    assert cfg["version"] == "1.0.1", "映射表版本与冻结版不符"
+    cfg = yaml.safe_load((config_path("key_hand_mapping.yaml")).read_text(encoding="utf-8"))
+    require(cfg["version"] == "1.0.1", "映射表版本与冻结版不符")
     hand: dict[str, str] = {}
     for h, fingers in cfg["hand_zones"].items():
         for _finger, keys in fingers.items():

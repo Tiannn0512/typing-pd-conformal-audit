@@ -1,15 +1,8 @@
-# Provenance — development commit chain (notarization ledger)
+# Provenance — development history
 
-This public repository is a curated snapshot (single seeded commit + incremental
-manuscript-version commits). The authoritative development history — including the
-pre-registration and result-freeze commits — is kept in the authors' development
-repository. Third-party copyrighted paper PDFs and all dataset files are excluded
-from this public archive, which is why the full commit history is not pushed here.
+The full development history is available on the [`archive/dev-history`](https://github.com/Tiannn0512/typing-pd-conformal-audit/tree/archive/dev-history) branch. The public `main` branch contains the release snapshot and subsequent maintenance commits. The historical list below records development commit IDs and author dates; the OSF registration is listed separately under Governance tags.
 
-For timestamp/priority purposes, the entries below are the complete commit chain
-of the development repository (hash | author date | subject), recorded verbatim.
-Anyone with access to the development repository can verify each hash; the two
-governance tags are called out explicitly.
+Software maintenance on 2026-10-20 repairs stage ordering, CHG-P1 continuation, output isolation, input validation and shared analysis functions. The registered scientific settings and published result tables are retained. Execution of the complete four-dataset analysis requires the source datasets; synthetic regression checks are reported separately from scientific reproduction.
 
 ## Governance tags
 

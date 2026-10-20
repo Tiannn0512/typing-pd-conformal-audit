@@ -5,10 +5,14 @@
   本实现（src/cp/conformal.py，score = 1 − 真类概率，k = ceil((n+1)(1−α)) 有限样本校正）
   vs MAPIE 1.5.0 SplitConformalClassifier（conformity_score='lac'，同一口径）
 对比：逐测试点预测集一致率、覆盖率、平均集合大小。
-结果落 results/mapie_crosscheck.md。
+结果写入 --output-dir 指定的新目录。
 """
+
 from __future__ import annotations
 
+import argparse
+from datetime import datetime, timezone
+import importlib.metadata
 import sys
 from pathlib import Path
 
@@ -16,19 +20,37 @@ import numpy as np
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from runtime import config_path, require
 from cp.conformal import lac_scores, predict_sets_split  # noqa: E402
 
 from mapie.classification import SplitConformalClassifier  # noqa: E402
 from sklearn.linear_model import LogisticRegression  # noqa: E402
 from sklearn.model_selection import train_test_split  # noqa: E402
 
-SEED = yaml.safe_load(
-    (Path(__file__).resolve().parents[1] / "configs" / "seeds.yaml").read_text(encoding="utf-8")
-)["unit_test_seed"]
+SEED = yaml.safe_load((config_path("seeds.yaml")).read_text(encoding="utf-8"))[
+    "unit_test_seed"
+]
 ALPHA = 0.10
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Compare split-CP prediction sets with MAPIE"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs")
+        / datetime.now(timezone.utc).strftime("mapie-%Y%m%dT%H%M%S.%fZ"),
+    )
+    args = parser.parse_args()
+    output_dir = args.output_dir.resolve()
+    reference_dir = Path(__file__).resolve().parents[1] / "results"
+    require(
+        not output_dir.is_relative_to(reference_dir),
+        "Write cross-checks outside the published reference directory",
+    )
+    output_dir.mkdir(parents=True, exist_ok=False)
     rng = np.random.default_rng(SEED)
     # 合成二分类：二维高斯，非线性边界（保证模型非完美、集合非平凡）
     n = 6000
@@ -36,9 +58,12 @@ def main() -> None:
     x1 = rng.multivariate_normal([1.2, 0.8], [[1.2, -0.2], [-0.2, 0.9]], n // 2)
     X = np.vstack([x0, x1])
     y = np.array([0] * (n // 2) + [1] * (n // 2))
-    X_tr, X_tmp, y_tr, y_tmp = train_test_split(X, y, test_size=0.5, random_state=SEED, stratify=y)
-    X_cal, X_te, y_cal, y_te = train_test_split(X_tmp, y_tmp, test_size=0.6,
-                                                 random_state=SEED + 1, stratify=y_tmp)  # 衍生 seed 见 seeds.yaml derived_seeds
+    X_tr, X_tmp, y_tr, y_tmp = train_test_split(
+        X, y, test_size=0.5, random_state=SEED, stratify=y
+    )
+    X_cal, X_te, y_cal, y_te = train_test_split(
+        X_tmp, y_tmp, test_size=0.6, random_state=SEED + 1, stratify=y_tmp
+    )  # 衍生 seed 见 seeds.yaml derived_seeds
 
     model = LogisticRegression(max_iter=1000, random_state=SEED).fit(X_tr, y_tr)
     probs_cal = model.predict_proba(X_cal)
@@ -57,6 +82,10 @@ def main() -> None:
     # MAPIE 返回 one-hot 形状 (n, n_classes)；转集合
     sets_mapie = [frozenset(np.where(row)[0].tolist()) for row in np.asarray(ps_mapie)]
 
+    require(
+        len(sets_ours) == len(sets_mapie) == len(y_te),
+        "Prediction-set row counts differ",
+    )
     n_equal = sum(a == b for a, b in zip(sets_ours, sets_mapie))
     cov_ours = float(np.mean([y in s for y, s in zip(y_te, sets_ours)]))
     cov_mapie = float(np.mean([y in s for y, s in zip(y_te, sets_mapie)]))
@@ -66,7 +95,7 @@ def main() -> None:
     lines = [
         "# MAPIE 对拍报告（一次性验证）",
         "",
-        f"**生成**：2026-09-26 ｜ **实现**：src/cp/conformal.py ｜ **对照**：MAPIE 1.5.0 "
+        f"**生成**：{datetime.now(timezone.utc).isoformat()} ｜ **实现**：src/cp/conformal.py ｜ **对照**：MAPIE {importlib.metadata.version('MAPIE')} "
         f"SplitConformalClassifier(conformity_score='lac', prefit=True)",
         f"**数据**：合成二维二分类 n=6000（train 3000 / cal 1200 / test 1800），seed={SEED}，α={ALPHA}",
         "",
@@ -79,9 +108,10 @@ def main() -> None:
         f"**结论**：{'一致 ✅' if n_equal == len(sets_ours) else '存在差异，须排查 ❌'}"
         "（两实现使用同一 LAC 分数与同一有限样本校正分位；逐点一致为预期）。",
     ]
-    Path("results").mkdir(exist_ok=True)
-    Path("results/mapie_crosscheck.md").write_text("\n".join(lines), encoding="utf-8")
-    print(f"[mapie_crosscheck] equal={n_equal}/{len(sets_ours)} cov ours={cov_ours:.4f} mapie={cov_mapie:.4f}")
+    (output_dir / "mapie_crosscheck.md").write_text("\n".join(lines), encoding="utf-8")
+    print(
+        f"[mapie_crosscheck] equal={n_equal}/{len(sets_ours)} cov ours={cov_ours:.4f} mapie={cov_mapie:.4f}"
+    )
     if n_equal != len(sets_ours):
         raise SystemExit(1)
 

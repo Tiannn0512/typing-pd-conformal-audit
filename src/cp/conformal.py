@@ -18,82 +18,138 @@ conformal，权重 w(x) = dP_target/dP_source 已知或可估）。
   正确性由 test_4 的独立式(8) oracle（广义逆分位数构造，与实现无共享代数）逐点对拍保证。
 - 全部函数无 RNG、无拟合；分数由调用方给出（模型分数或解析后验）。
 """
+
 from __future__ import annotations
 
 import numpy as np
 
 
-def lac_scores(probs: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """LAC 分数 = 1 − 观测类概率。probs shape (n, k_classes)，y ∈ {0..k-1}。"""
+def validate_alpha(alpha):
+    if isinstance(alpha, (bool, np.bool_)) or not np.isscalar(alpha):
+        raise ValueError("alpha must be a finite number strictly between 0 and 1")
+    try:
+        value = float(alpha)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "alpha must be a finite number strictly between 0 and 1"
+        ) from exc
+    if not np.isfinite(value) or not 0 < value < 1:
+        raise ValueError("alpha must be a finite number strictly between 0 and 1")
+    return value
+
+
+def validate_probs(probs):
     probs = np.asarray(probs, dtype=float)
-    y = np.asarray(y, dtype=int)
+    if probs.ndim != 2 or probs.shape[1] != 2:
+        raise ValueError("Probabilities must have shape (n, 2)")
+    if not np.isfinite(probs).all() or np.any((probs < 0) | (probs > 1)):
+        raise ValueError("Probabilities must be finite and lie in [0, 1]")
+    if not np.allclose(probs.sum(axis=1), 1.0, rtol=0, atol=1e-7):
+        raise ValueError("Probability rows must sum to 1")
+    return probs
+
+
+def validate_labels(y, n):
+    y = np.asarray(y)
+    if y.ndim != 1 or len(y) != n or not np.isin(y, [0, 1]).all():
+        raise ValueError(
+            "Labels must be a one-dimensional array of 0 or 1 matching the rows"
+        )
+    return y.astype(int)
+
+
+def validate_scores(scores_cal):
+    scores = np.asarray(scores_cal, dtype=float)
+    if scores.ndim != 1 or not len(scores):
+        raise ValueError("Calibration scores must be a nonempty one-dimensional array")
+    if not np.isfinite(scores).all() or np.any((scores < 0) | (scores > 1)):
+        raise ValueError("LAC calibration scores must be finite and lie in [0, 1]")
+    return scores
+
+
+def lac_scores(probs: np.ndarray, y: np.ndarray) -> np.ndarray:
+    probs = validate_probs(probs)
+    y = validate_labels(y, len(probs))
     return 1.0 - probs[np.arange(len(y)), y]
 
 
 def split_conformal_quantile(scores_cal: np.ndarray, alpha: float) -> float:
-    """有限样本校正分位数：sort 后第 k = ceil((n+1)(1−alpha)) 个次序统计量。"""
-    scores_cal = np.asarray(scores_cal, dtype=float)
+    scores_cal = validate_scores(scores_cal)
+    alpha = validate_alpha(alpha)
     n = len(scores_cal)
-    if n == 0:
-        raise ValueError("空校准集（上游 merge 零行 bug 几乎必然）——拒绝静默退化为全集")
     k = int(np.ceil((n + 1) * (1.0 - alpha)))
     if k > n:
-        return float("inf")  # 校准集过小：诚实退化为全集
+        return float("inf")
     return float(np.sort(scores_cal)[k - 1])
 
 
-def predict_sets_split(scores_cal: np.ndarray, probs_test: np.ndarray,
-                       alpha: float) -> list[frozenset[int]]:
-    """split conformal 预测集：含 y ⟺ 1 − p_y ≤ q̂。返回长度 n_test 的 frozenset 列表。"""
-    q = split_conformal_quantile(scores_cal, alpha)
-    sets = []
-    for row in np.asarray(probs_test, dtype=float):
-        labels = {y for y, p_y in enumerate(row) if (1.0 - p_y) <= q}
-        sets.append(frozenset(labels))
-    return sets
+def sets_at_quantile(probs, q):
+    probs = validate_probs(probs)
+    if isinstance(q, (bool, np.bool_)) or not np.isscalar(q):
+        raise ValueError(
+            "The LAC quantile must lie in [0, 1] or equal positive infinity"
+        )
+    try:
+        q = float(q)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("The LAC quantile must be numeric") from exc
+    if np.isnan(q) or q < 0 or (np.isfinite(q) and q > 1):
+        raise ValueError(
+            "The LAC quantile must lie in [0, 1] or equal positive infinity"
+        )
+    return [frozenset(np.flatnonzero(1.0 - row <= q).tolist()) for row in probs]
+
+
+def predict_sets_split(
+    scores_cal: np.ndarray, probs_test: np.ndarray, alpha: float
+) -> list[frozenset[int]]:
+    return sets_at_quantile(probs_test, split_conformal_quantile(scores_cal, alpha))
 
 
 class WeightedConformal:
-    """协变量偏移下已知密度比权重的 weighted conformal（Tibshirani et al. 2019）。
-
-    fit 阶段：记录校准分数与严格低于质量的累计权重，构建加权 CDF。
-    含 y 条件（Tibshirani 式(8) 直接实现，见模块 docstring）：
-        W_<(s_y) < (1−α)·(T_raw + w_test)
-    """
+    """Weighted LAC prediction sets using the registered strict-below mass rule."""
 
     def __init__(self, w_cal: np.ndarray, scores_cal: np.ndarray, alpha: float):
-        w_cal = np.asarray(w_cal, dtype=float)
-        scores_cal = np.asarray(scores_cal, dtype=float)
-        if np.any(~np.isfinite(w_cal)) or np.any(w_cal < 0):
-            raise ValueError("权重必须非负且有限")
-        if np.sum(w_cal) <= 0:
-            raise ValueError("权重之和必须为正")
-        n = len(scores_cal)
-        self.n = n
-        self.alpha = float(alpha)
-        self._t_raw = float(np.sum(w_cal))
+        scores_cal = validate_scores(scores_cal)
+        w_cal = self._weights(w_cal, len(scores_cal), "Calibration")
+        total = float(w_cal.sum())
+        if not np.isfinite(total) or total <= 0:
+            raise ValueError("Calibration weights must have a positive finite sum")
+        self.n = len(scores_cal)
+        self.alpha = validate_alpha(alpha)
+        self._t_raw = total
         order = np.argsort(scores_cal, kind="mergesort")
         self._sorted_scores = scores_cal[order]
-        self._cdf_weights = w_cal[order]  # 原始权重的 ≤ 累计质量
+        self._cdf_weights = w_cal[order]
+        self._cdf = np.concatenate([[0.0], np.cumsum(self._cdf_weights)])
+
+    @staticmethod
+    def _weights(weights, n, role):
+        weights = np.asarray(weights, dtype=float)
+        if weights.ndim != 1 or len(weights) != n:
+            raise ValueError(
+                f"{role} weights must be one-dimensional and match the row count"
+            )
+        if not np.isfinite(weights).all() or np.any(weights < 0):
+            raise ValueError(f"{role} weights must be nonnegative and finite")
+        return weights
 
     def _weighted_cdf_below(self, s: np.ndarray) -> np.ndarray:
-        """W_<(s)：原始权重下**严格小于** s 的累计质量（测试点无关，一次构建全程复用）。"""
         idx = np.searchsorted(self._sorted_scores, s, side="left")
-        cdf = np.concatenate([[0.0], np.cumsum(self._cdf_weights)])
-        return cdf[idx]
+        return self._cdf[idx]
 
-    def predict_sets(self, w_test_ratio: np.ndarray, probs_test: np.ndarray) -> list[frozenset[int]]:
-        """w_test_ratio：测试点密度比 w(x)（进入式(7) 精确 p 值规则，见模块 docstring）。"""
-        w_test = np.asarray(w_test_ratio, dtype=float)
-        if np.any(~np.isfinite(w_test)) or np.any(w_test < 0):
-            raise ValueError("测试点权重必须非负且有限")
-        s_all = 1.0 - np.asarray(probs_test, dtype=float)  # (n_test, 2) 每候选标签分数
-        if np.any(~np.isfinite(s_all)):
-            raise ValueError("probs_test 含非有限值")
-        W_below = self._weighted_cdf_below(s_all.ravel()).reshape(s_all.shape)
-        thresholds = (1.0 - self.alpha) * (self._t_raw + w_test)  # (n_test,)
-        sets = []
-        for row_w, thr in zip(W_below, thresholds):
-            labels = {y for y, w_val in enumerate(row_w) if w_val < thr}
-            sets.append(frozenset(labels))
-        return sets
+    def predict_sets(
+        self, w_test_ratio: np.ndarray, probs_test: np.ndarray
+    ) -> list[frozenset[int]]:
+        probs = validate_probs(probs_test)
+        w_test = self._weights(w_test_ratio, len(probs), "Test")
+        with np.errstate(over="ignore"):
+            totals = self._t_raw + w_test
+        if not np.isfinite(totals).all():
+            raise ValueError("Combined calibration and test weight must remain finite")
+        below = self._weighted_cdf_below(1.0 - probs)
+        thresholds = (1.0 - self.alpha) * totals
+        return [
+            frozenset(np.flatnonzero(row < threshold).tolist())
+            for row, threshold in zip(below, thresholds)
+        ]

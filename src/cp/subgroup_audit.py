@@ -29,21 +29,18 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.conformal import lac_scores, predict_sets_split  # noqa: E402
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from cp.remediate import cp_ci  # noqa: E402
-from models.run_transfer import load_matrix, tier_columns  # noqa: E402
+from runtime import reference_path, require
+from protocol import CAP, DIRECTIONS
+from models.common import fit_transfer, load_pooled
+from cp.metrics import cp_ci  # noqa: E402
+from models.common import tier_columns  # noqa: E402
 
 MIT_SEX_CAVEAT = ("MIT 公开数据无性别字段；文献口径：对照组女性偏多 ~17pp"
                   "（计划书局限声明冻结值）——该方向性别层不可计算，仅显式登记")
@@ -72,7 +69,7 @@ def load_target_with_ids(cfg: dict) -> dict:
         y_t = merged["label_pd"].to_numpy(dtype=int)
         ids = merged["subject_id"].to_numpy()
         origin = np.array([tgt] * len(y_t), dtype=object)
-    assert X_s.shape[1] == X_t.shape[1] and not np.isnan(X_t).any()
+    require(X_s.shape[1] == X_t.shape[1] and not np.isnan(X_t).any(), "Analysis invariant failed")
     return {"X_s": X_s, "y_s": y_s, "X_t": X_t, "y_t": y_t, "ids": ids,
             "origin": origin, "tier": tier}
 
@@ -99,37 +96,29 @@ def main() -> None:
     ap.add_argument("--strata", default="sex,age_median")
     ap.add_argument("--directions", default="primary")
     args = ap.parse_args()
-    assert args.strata.split(",") == ["sex", "age_median"], "分层变量须为注册对 sex,age_median"
-    assert args.directions == "primary"
+    require(args.strata.split(",") == ["sex", "age_median"], "分层变量须为注册对 sex,age_median")
+    require(args.directions == "primary", "Analysis invariant failed")
 
     demo = tappy_demo()
-    frozen = pd.read_csv("results/primary_family.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
 
     rows, avail = [], []
     for cfg in DIRECTIONS:
         d = load_target_with_ids(cfg)
         direction, n = cfg["direction"], len(d["y_t"])
-        idx = np.arange(len(d["X_s"]))
-        tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED,
-                                           stratify=d["y_s"])
-        scaler = StandardScaler().fit(d["X_s"][tr_idx])
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-        clf.fit(scaler.transform(d["X_s"][tr_idx]), d["y_s"][tr_idx])
-        sets = predict_sets_split(
-            lac_scores(clf.predict_proba(scaler.transform(d["X_s"][cal_idx])),
-                       d["y_s"][cal_idx]),
-            clf.predict_proba(scaler.transform(d["X_t"])), ALPHA)
+        fitted = fit_transfer(d["X_s"], d["y_s"], d["X_t"])
+        sets = fitted["sets"]
         hits = np.array([t in s for t, s in zip(d["y_t"], sets)])
         sizes = np.array([len(s) for s in sets])
         k = int(hits.sum())
         f = frozen[(frozen["direction"] == direction) & (frozen["model"] == "lr")].iloc[0]
-        assert int(f["k"]) == k and int(f["n"]) == n, f"{direction} k/n 漂移"
+        require(int(f["k"]) == k and int(f["n"]) == n, f"{direction} k/n 漂移")
         for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-            assert abs(float(f[col]) - (hits.mean() if col == "coverage" else
+            require(abs(float(f[col]) - (hits.mean() if col == "coverage" else
                                         hits[d["y_t"] == 1].mean() if col == "cpc_pd" else
                                         hits[d["y_t"] == 0].mean() if col == "cpc_hc" else
                                         sizes.mean() if col == "mean_size" else
-                                        (sizes == 1).mean())) < 1e-12, f"{direction} {col} 漂移"
+                                        (sizes == 1).mean())) < 1e-12, f"{direction} {col} 漂移")
 
         tgt_ids = pd.DataFrame({"subject_id": d["ids"], "origin": d["origin"],
                                 "hit": hits, "size": sizes})

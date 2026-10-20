@@ -45,15 +45,15 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from cp.conformal import lac_scores, predict_sets_split, split_conformal_quantile  # noqa: E402
-from cp.coverage_audit import ALPHA, CAP, DIRECTIONS, SEED, load_pooled  # noqa: E402
-from cp.remediate import metrics, sets_at_quantile  # noqa: E402
-from models.run_transfer import load_matrix  # noqa: E402
+from runtime import reference_path, require
+from cp.conformal import lac_scores, split_conformal_quantile  # noqa: E402
+from protocol import ALPHA, CAP, DIRECTIONS
+from models.common import fit_model, fit_transfer, source_split, load_pooled
+from cp.metrics import metrics
+from cp.conformal import sets_at_quantile  # noqa: E402
+from models.common import load_matrix  # noqa: E402
 
 STRESS_SEED = 1   # seeds.yaml stress_seed_base
 MATCH_PREV = 0.74  # 注册"Tappy 实测 74%"（冻结队列实值 0.7688，见预声明 2）
@@ -75,28 +75,26 @@ def main() -> None:
     ap.add_argument("--arm", default="resample_only,flip_only,both")
     ap.add_argument("--match-prevalence", type=float, default=MATCH_PREV)
     args = ap.parse_args()
-    assert args.arm.split(",") == list(FLIP_ARMS), "臂清单须与预注册一致"
-    assert abs(args.match_prevalence - MATCH_PREV) < 1e-12, "患病率须为注册值 0.74"
+    require(args.arm.split(",") == list(FLIP_ARMS), "臂清单须与预注册一致")
+    require(abs(args.match_prevalence - MATCH_PREV) < 1e-12, "患病率须为注册值 0.74")
 
     cfg = next(d for d in DIRECTIONS if d["direction"] == "mit2tappy")
     tier = min(CAP["mit"], CAP["tappy"])
     X_s, y_s = load_pooled(cfg["sources"], tier)
     X_t, y_t = load_matrix(cfg["target"], tier)
-    assert X_s.shape[1] == X_t.shape[1]
+    require(X_s.shape[1] == X_t.shape[1], "Analysis invariant failed")
     n_pd, n_hc, n_pool = int((y_s == 1).sum()), int((y_s == 0).sum()), len(y_s)
-    assert (n_pd, n_hc, n_pool) == (42, 40, 82), "MIT 源池构成与冻结队列不符"
+    require((n_pd, n_hc, n_pool) == (42, 40, 82), "MIT 源池构成与冻结队列不符")
 
     # 表型实时读取（预声明 1）
-    frozen = pd.read_csv("results/primary_family.csv")
+    frozen = pd.read_csv(reference_path("primary_family.csv"))
     ph = frozen[(frozen["direction"] == "mit2tappy") & (frozen["model"] == "lr")].iloc[0]
     PH = {"coverage": float(ph["coverage"]), "mean_size": float(ph["mean_size"]),
           "cpc_pd": float(ph["cpc_pd"]), "cpc_hc": float(ph["cpc_hc"])}
 
     def run(y_train: np.ndarray, y_cal: np.ndarray, X_tr: np.ndarray, X_cl: np.ndarray,
             ) -> dict:
-        scaler = StandardScaler().fit(X_tr)
-        clf = LogisticRegression(random_state=42, max_iter=1000)
-        clf.fit(scaler.transform(X_tr), y_train)
+        scaler, clf = fit_model(X_tr, y_train)
         q = split_conformal_quantile(lac_scores(clf.predict_proba(scaler.transform(X_cl)),
                                                 y_cal), ALPHA)
         probs_te = clf.predict_proba(scaler.transform(X_t))
@@ -112,23 +110,18 @@ def main() -> None:
 
     # ---- 基线（无操纵）
     idx = np.arange(n_pool)
-    tr_idx, cal_idx = train_test_split(idx, test_size=0.30, random_state=SEED, stratify=y_s)
-    scaler = StandardScaler().fit(X_s[tr_idx])
-    clf = LogisticRegression(random_state=42, max_iter=1000)
-    clf.fit(scaler.transform(X_s[tr_idx]), y_s[tr_idx])
-    sets_b = predict_sets_split(lac_scores(clf.predict_proba(scaler.transform(X_s[cal_idx])),
-                                           y_s[cal_idx]), clf.predict_proba(scaler.transform(X_t)),
-                                ALPHA)
+    tr_idx, cal_idx = source_split(y_s)
+    fitted = fit_transfer(X_s, y_s, X_t)
+    sets_b = fitted["sets"]
     m_b = metrics(y_t, sets_b)
-    assert int(ph["k"]) == m_b["k"] and int(ph["n"]) == m_b["n"]
+    require(int(ph["k"]) == m_b["k"] and int(ph["n"]) == m_b["n"], "Analysis invariant failed")
     for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-        assert abs(float(ph[col]) - m_b[col]) < 1e-12, f"基线 {col} 漂移"
-    rc = pd.read_csv("results/recovery_cost_table.csv")
+        require(abs(float(ph[col]) - m_b[col]) < 1e-12, f"基线 {col} 漂移")
+    rc = pd.read_csv(reference_path("recovery_cost_table.csv"))
     rc_naive = rc[(rc["direction"] == "mit2tappy") & (rc["method"] == "naive_cp")].iloc[0]
-    assert int(rc_naive["k"]) == m_b["k"] and int(rc_naive["n"]) == m_b["n"], \
-        "基线与 4.4 recovery_cost naive 行漂移"
+    require(int(rc_naive["k"]) == m_b["k"] and int(rc_naive["n"]) == m_b["n"], "基线与 4.4 recovery_cost naive 行漂移")
     for col in ("coverage", "cpc_pd", "cpc_hc", "mean_size", "singleton_rate"):
-        assert abs(float(rc_naive[col]) - m_b[col]) < 1e-12, f"基线 vs 4.4 {col} 漂移"
+        require(abs(float(rc_naive[col]) - m_b[col]) < 1e-12, f"基线 vs 4.4 {col} 漂移")
     m_b["reproduced"] = True  # 基线即表型本身（断言已证逐位相等）
     m_b["delta_coverage_vs_phenotype"] = 0.0
     m_b["delta_mean_size_vs_phenotype"] = 0.0
@@ -141,8 +134,7 @@ def main() -> None:
     keep_hc = np.sort(rng.choice(hc_all, size=15, replace=False))
     keep = np.sort(np.concatenate([np.flatnonzero(y_s == 1), keep_hc]))
     X_r, y_r = X_s[keep], y_s[keep]
-    tr2, cal2 = train_test_split(np.arange(len(y_r)), test_size=0.30,
-                                 random_state=SEED, stratify=y_r)
+    tr2, cal2 = source_split(y_r)
     m1 = run(y_r[tr2], y_r[cal2], X_r[tr2], X_r[cal2])
     rows.append({"arm": "resample_only", "scope": "pool_level", "n_pool": len(y_r),
                  "n_pd_pool": int((y_r == 1).sum()), "n_hc_pool": int((y_r == 0).sum()),
@@ -156,7 +148,7 @@ def main() -> None:
     y_flip = y_s.copy()
     y_flip[fl_pd] = 0
     y_flip[fl_hc] = 1
-    assert abs((y_flip == 1).mean() - y_s.mean()) < 1e-12, "臂 2 未保持患病率"
+    require(abs((y_flip == 1).mean() - y_s.mean()) < 1e-12, "臂 2 未保持患病率")
     for scope, ytr, ycl in [("cal_only", y_s[tr_idx], y_flip[cal_idx]),
                             ("train_cal", y_flip[tr_idx], y_flip[cal_idx])]:
         m2 = run(ytr, ycl, X_s[tr_idx], X_s[cal_idx])
@@ -174,9 +166,8 @@ def main() -> None:
     y_r_flip = y_r.copy()
     y_r_flip[fl3_pd] = 0
     y_r_flip[fl3_hc] = 1
-    assert abs((y_r_flip == 1).mean() - y_r.mean()) < 1e-12, "臂 3 未保持重采样池患病率"
-    tr3, cal3 = train_test_split(np.arange(len(y_r)), test_size=0.30,
-                                 random_state=SEED, stratify=y_r)
+    require(abs((y_r_flip == 1).mean() - y_r.mean()) < 1e-12, "臂 3 未保持重采样池患病率")
+    tr3, cal3 = source_split(y_r)
     n_pd_r, n_hc_r = int((y_r == 1).sum()), int((y_r == 0).sum())
     for scope, ytr, ycl in [("cal_only", y_r[tr3], y_r_flip[cal3]),
                             ("train_cal", y_r_flip[tr3], y_r_flip[cal3])]:
