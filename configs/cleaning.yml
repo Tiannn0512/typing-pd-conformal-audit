@@ -1,0 +1,71 @@
+# cleaning.yml: cleaning rules
+# Discipline: every rule is label-blind (labels are used only in the cohort-table grouping/exclusion rows, never in feature cleaning)
+
+# ---------- 0. digraph pool definition ----------
+digraph_pool:
+  # only keep_flag=True rows enter (parser-level QC-flagged rows never enter: Tappy subj_mismatch/field_invalid/bad timing values, OE solitary keys)
+  require_keep_flag: true
+  # the first row of each session has no predecessor (latency/flight are NaN) -> not a digraph, not pooled (counted as no_predecessor, not a violation)
+  require_digraph_timestamps: true   # both latency and flight non-NaN
+  # exact duplicate OE event rows are kept (0.27% of keep rows)
+
+# ---------- 1. digraph-level rules (all four datasets) ----------
+digraph_rules:
+  hold_le0_remove: true        # drop hold <= 0
+  hold_gt10s_remove: true      # drop hold > 10s (threshold = 10000 ms)
+  latency_le0_remove: true     # drop latency <= 0
+  latency_gt10s_remove: true   # drop latency > 10s (threshold = 10000 ms)
+  # the rules name only hold/latency; flight has no universal threshold (fixed-text flight rule below)
+
+# ---------- 2. fixed-text vs free-text regimes ----------
+text_type:
+  mit: fixed     # transcription of a standard text
+  typd: fixed    # transcription of fixed text (ReadMe: The Little Prince excerpts + unified opening paragraph)
+  oe: fixed      # transcription of fixed Wikipedia sentences
+  tappy: free    # at-home system-level natural typing (fixed-text rules do not apply)
+fixed_text_rules:
+  flight_gt3s_remove: true     # drop digraph flight > 3s (threshold = 3000 ms, fixed-text datasets only)
+  min_chars_per_min: 20        # session typing rate < 20 chars/min -> whole session dropped (fixed-text datasets only)
+  rate_definition: "rate = session valid digraphs / (last press - first press of the session, in minutes)"
+free_text_rules:
+  note: "the flight>3s and rate rules do not apply to Tappy; only the section-1 universal rules apply"
+
+# ---------- 3. session definition and session-level rules ----------
+session_definition:   # aligned with the parsers
+  mit: "visit file (file_1/file_2, filename stem)"
+  tappy: "monthly file (USER_YYMM)"
+  typd: "visit (all TEX trials of a subject evaluated together; digraph derivation stays within a trial, never across trials)"
+  oe: "participant x response (one continuous entry)"
+session_rules:
+  min_valid_digraphs: 100      # session with < 100 valid digraphs -> session dropped (all four datasets)
+
+# ---------- 4. visit selection (first visit only per subject) ----------
+visit_selection:
+  mit_first_visit_only: true   # MIT subjects with 2 visits -> keep only the earliest filename epoch (label-blind)
+  note: "only MIT has repeated clinical visits; Tappy monthly files / OE responses are a natural multi-session design, TyPD is single-visit, so the rule does not apply"
+
+# ---------- 5. person-level rules ----------
+person_rules:
+  min_valid_digraphs: 300      # person with < 300 valid digraphs (within surviving sessions) -> excluded
+
+# ---------- 6. cohort definition (labels allowed here only; produces results/cohort_flow.csv) ----------
+cohort_rules:
+  require_label: true          # no label -> not classifiable -> excluded (Tappy 49 events-no-labels enter this row)
+  require_events: true         # labeled but no events -> excluded (Tappy 10 labeled-no-events enter this row)
+  tremor_only_exclude_main: true   # Tappy Tremors=True & Parkinsons=False (tremor-only) excluded from the main analysis;
+                                   # sensitivity analyses re-enter them once as PD and once as HC
+  oe_hy0_rule: "OE self-report at H&Y stage 0 is kept (the public CSV has no H&Y field, so the rule is not operationalizable;
+                 the main analysis keeps all self-reported PD; the 'drop H&Y0' sensitivity is recorded as not applicable,
+                 same status as the unavailable Tappy UPDRS field)"
+  label_source:
+    mit: clinical    # clinical gold standard
+    typd: clinical   # clinical gold standard
+    tappy: self_report
+    oe: self_report
+
+# ---------- 7. feature tiers produced by this pipeline ----------
+features_built:
+  L1_all: "hold/latency/flight x mean/median/sd/p10/p90 (four datasets, 15 columns; NaN excluded from statistics)"
+  L2_tappy_native: "Tappy native hand columns (hand_from L/R stratification x hold/latency/flight mean, 6 columns; the S space layer does not enter the stratification)"
+  L2_l3_mit_oe: "MIT/OE L2 (key->hand mapping) and L3 (character-digraph transitions) are produced by build_features.py from
+             configs/key_hand_mapping.yml"

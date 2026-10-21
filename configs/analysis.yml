@@ -1,0 +1,60 @@
+# analysis.yml: model parameters, feature tiers, random seeds
+# Model parameters (LR/LGBM configuration, alpha, audit thresholds) are fixed inside the modules (assert-pinned).
+
+# ---------- Random seeds ----------
+# Subject-level train/calib splits and the 50-seed repeated runs: seeds 1-50
+split_seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+              11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+              21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+              31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+              41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+
+# Deterministic seed for the power simulation (src/power_sim.py)
+unit_test_seed: 20260925
+
+# ---------- Feature tiers ----------
+# Cross-dataset downgrade rule is applied by run_transfer as min(source, target)
+
+tiers:
+  L1:
+    description: unconditional statistics of the hold/flight/latency signals
+    features: [hold, flight, latency]
+    stats: [mean, median, sd, p10, p90]
+  L2:
+    description: L1 + hand-conditional features (left/right-hand split; space/special keys unassigned, dropped and counted)
+    features: [hold, flight, latency, hand_conditional]
+    stats: [mean, median, sd, p10, p90]
+  L3:
+    description: L2 + character-digraph features (char_from->char_to transition-type aggregation)
+    features: [hold, flight, latency, hand_conditional, char_digraph]
+    stats: [mean, median, sd, p10, p90]
+
+# Maximum tier available per dataset
+# typd=1 basis: the TyPD raw schema has only press/release/pressure; no hand or character columns
+dataset_max_tier:
+  mit: 3
+  tappy: 2   # system-level hooks: native left/right-hand columns, no character identity; no L2 gap
+  typd: 1    # phone touchscreen: schema has only press/release/pressure -> L1 ceiling
+  oe: 3
+
+# Cross-dataset downgrade rule (auto-downgrade by the target dataset's max tier; tier recorded as an explicit covariate of coverage decay)
+cross_dataset_rule: "tier(pair) = min(max_tier(source), max_tier(target))"
+
+# Pressure channel: exists only in TyPD, absent in the others -> discarded, not part of any tier
+pressure_channel: discarded
+
+feature_definitions:
+  L2_hand_conditional:
+    applies: [mit, tappy, oe]
+    definition: "hand in {L, R} stratification (S/space/special/unmatched dropped and counted) x {hold, latency, flight} mean -> 6 columns"
+    columns: "L2_{hold|latency|flight}_{L|R}_mean"
+  L3_digraph_transition:
+    applies: [mit, oe]
+    definition: "for adjacent character pairs (char_from->char_to) where both sides map to a hand, stratify by
+                 transition type: same-hand (L->L / R->R) vs cross-hand (L->R / R->L);
+                 {latency, flight} x {same, cross} mean + cross fraction -> 5 columns;
+                 pairs with an unmappable side are dropped and counted. Rationale: inter-hand
+                 digraph timing is a known PD motor-control marker (low-dimensional, source-free,
+                 derived from the key-mapping table)"
+    columns: "L3_{latency|flight}_{same|cross}_mean + L3_frac_cross"
+  unmatched_counting: "each direction prints excluded_unmatched_events / excluded_unassigned_events counts at build time"
